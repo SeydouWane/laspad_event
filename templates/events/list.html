@@ -1,0 +1,565 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}LASPAD Event — Événements scientifiques{% endblock %}
+
+{% block extra_head %}
+  <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
+  <style>
+    /* ── Cards ── */
+    .event-card {
+      transition: transform .2s, box-shadow .2s;
+      display: flex;
+      flex-direction: column;
+    }
+    .event-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 16px 32px rgba(0,0,0,.1);
+    }
+
+    /* ── Carrousel ── */
+    .carousel-wrapper { overflow: hidden; cursor: grab; user-select: none; }
+    .carousel-wrapper:active { cursor: grabbing; }
+    .carousel-track {
+      display: flex;
+      gap: 1.5rem;
+      transition: transform .45s cubic-bezier(.4,0,.2,1);
+      will-change: transform;
+    }
+    .carousel-track .event-card { flex-shrink: 0; }
+
+    /* ── Boutons nav ── */
+    .c-btn {
+      width: 2.5rem; height: 2.5rem;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: #fff;
+      border: 1.5px solid #e5e7eb;
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+      cursor: pointer;
+      transition: all .15s;
+      flex-shrink: 0;
+    }
+    .c-btn:hover { background: #1a6b3a; border-color: #1a6b3a; }
+    .c-btn:hover svg { stroke: #fff; }
+    .c-btn:disabled { opacity: .3; cursor: not-allowed; pointer-events: none; }
+
+    /* ── Dots ── */
+    .c-dot {
+      width: 6px; height: 6px;
+      border-radius: 3px;
+      background: #d1d5db;
+      transition: all .2s;
+      cursor: pointer;
+      border: none;
+      padding: 0;
+    }
+    .c-dot.active { width: 20px; background: #1a6b3a; }
+
+    /* ── Filtre tabs ── */
+    .filter-tab {
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+      border: 1.5px solid transparent;
+      white-space: nowrap;
+    }
+    .filter-tab.active {
+      background: #1a6b3a;
+      color: #fff;
+      border-color: #1a6b3a;
+    }
+    .filter-tab:not(.active) {
+      background: #fff;
+      color: #6b7280;
+      border-color: #e5e7eb;
+    }
+    .filter-tab:not(.active):hover { border-color: #1a6b3a; color: #1a6b3a; }
+
+    /* ── Badge type ── */
+    .type-badge {
+      font-size: 11px; font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    /* ── Barre de progression ── */
+    .progress-bar { height: 4px; border-radius: 2px; background: #e5e7eb; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 2px; background: #1a6b3a; }
+
+    /* btn-gold & btn-white */
+    .btn-gold {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: #c9a227; color: #fff;
+      padding: 10px 22px; border-radius: 10px;
+      font-weight: 700; font-size: 14px;
+      text-decoration: none;
+      transition: all .15s;
+    }
+    .btn-gold:hover { background: #a8841f; transform: translateY(-1px); }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: linear-gradient(135deg,#1a6b3a,#2d8a52);
+      color: #fff;
+      padding: 10px 20px; border-radius: 10px;
+      font-weight: 700; font-size: 13px;
+      text-decoration: none;
+      transition: all .15s;
+      justify-content: center;
+    }
+    .btn-primary:hover { opacity: .92; transform: translateY(-1px); }
+  </style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ══ HERO ══ -->
+<section class="relative overflow-hidden" style="background:#0f1f15;">
+  <!-- Grille déco -->
+  <div class="absolute inset-0" style="opacity:.06;">
+    <svg width="100%" height="100%">
+      <defs>
+        <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+          <path d="M60 0L0 0 0 60" fill="none" stroke="white" stroke-width=".8"/>
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#grid)"/>
+    </svg>
+  </div>
+  <div class="absolute top-0 right-0 w-96 h-96 rounded-full pointer-events-none"
+       style="background:radial-gradient(circle,rgba(201,162,39,.15),transparent 70%);transform:translate(30%,-30%)"></div>
+  <div class="absolute bottom-0 left-0 w-80 h-80 rounded-full pointer-events-none"
+       style="background:radial-gradient(circle,rgba(26,107,58,.25),transparent 70%);transform:translate(-30%,30%)"></div>
+
+  <div class="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      <div>
+        <div class="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-6 border"
+             style="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);">
+          <span class="w-2 h-2 rounded-full animate-pulse" style="background:#c9a227;"></span>
+          <span class="text-sm font-medium" style="color:rgba(255,255,255,.7);">Plateforme officielle LASPAD</span>
+        </div>
+        <h1 class="text-4xl sm:text-5xl font-bold leading-tight mb-5"
+            style="font-family:'Sora',sans-serif;color:#fff;">
+          Les événements<br>
+          <span style="color:#c9a227;">scientifiques</span><br>
+          du LASPAD
+        </h1>
+        <p class="text-base leading-relaxed mb-7" style="color:rgba(255,255,255,.55);">
+          Webinaires, conférences, ateliers — rejoignez la communauté de recherche du
+          Laboratoire d'Analyse des Sociétés et Pouvoirs / Afrique – Diasporas.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          <a href="#evenements" class="btn-gold">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            Voir les événements
+          </a>
+          <a href="{% url 'dashboard:login' %}"
+             class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm"
+             style="background:rgba(255,255,255,.08);color:#fff;border:1.5px solid rgba(255,255,255,.15);">
+            Espace admin →
+          </a>
+        </div>
+      </div>
+
+      <!-- Logo desktop -->
+      <div class="hidden lg:flex justify-center">
+        <div class="relative">
+          <div class="absolute inset-0 rounded-2xl"
+               style="background:radial-gradient(circle,rgba(201,162,39,.15),transparent 65%);transform:scale(1.4);"></div>
+          <div class="relative rounded-2xl p-8 flex items-center justify-center"
+               style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(8px);">
+            <img src="{% static 'img/logo.png' %}" alt="LASPAD" class="w-64 h-auto object-contain"
+                 style="filter:brightness(0) invert(1);">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="mt-14 grid grid-cols-3 gap-px rounded-2xl overflow-hidden" style="background:rgba(255,255,255,.07);">
+      <div class="px-6 py-5 text-center" style="background:rgba(255,255,255,.04);">
+        <p class="text-2xl font-bold" style="font-family:'Sora',sans-serif;color:#c9a227;">
+          {{ upcoming_events.count }}
+        </p>
+        <p class="text-xs mt-0.5" style="color:rgba(255,255,255,.45);">À venir</p>
+      </div>
+      <div class="px-6 py-5 text-center" style="background:rgba(255,255,255,.04);">
+        <p class="text-2xl font-bold" style="font-family:'Sora',sans-serif;color:#c9a227;">
+          {{ past_events.count }}
+        </p>
+        <p class="text-xs mt-0.5" style="color:rgba(255,255,255,.45);">Éditions passées</p>
+      </div>
+      <div class="px-6 py-5 text-center" style="background:rgba(255,255,255,.04);">
+        <p class="text-2xl font-bold" style="font-family:'Sora',sans-serif;color:#c9a227;">100%</p>
+        <p class="text-xs mt-0.5" style="color:rgba(255,255,255,.45);">Gratuit</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ SECTION ÉVÉNEMENTS ══ -->
+<div id="evenements" class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+
+  {% if upcoming_events %}
+  <section class="mb-16">
+
+    <!-- En-tête section -->
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+      <div class="flex items-center gap-4">
+        <div class="w-1 h-9 rounded-full" style="background:linear-gradient(to bottom,#1a6b3a,#c9a227);"></div>
+        <div>
+          <h2 class="text-2xl font-bold" style="font-family:'Sora',sans-serif;color:#0f1f15;">
+            Événements à venir
+          </h2>
+          <p class="text-sm text-gray-400 mt-0.5">Inscrivez-vous dès maintenant</p>
+        </div>
+        <span class="text-xs font-bold px-2.5 py-1 rounded-full text-white" style="background:#1a6b3a;">
+          {{ upcoming_events.count }}
+        </span>
+      </div>
+
+      <!-- Filtres par type -->
+      <div class="flex gap-2 flex-wrap" id="type-filters">
+        <button class="filter-tab active" onclick="filterType('all', this)">Tous</button>
+        <button class="filter-tab" onclick="filterType('webinaire', this)">Webinaires</button>
+        <button class="filter-tab" onclick="filterType('conference', this)">Conférences</button>
+        <button class="filter-tab" onclick="filterType('atelier', this)">Ateliers</button>
+        <button class="filter-tab" onclick="filterType('seminaire', this)">Séminaires</button>
+      </div>
+    </div>
+
+    {% if upcoming_events.count == 1 %}
+    <!-- ── 1 événement : centré ── -->
+    <div class="flex justify-center" id="events-grid">
+      {% for event in upcoming_events %}
+      <div class="event-card-wrapper w-full max-w-sm" data-type="{{ event.event_type }}">
+        {% include 'events/_card.html' %}
+      </div>
+      {% endfor %}
+    </div>
+
+    {% elif upcoming_events.count <= 3 %}
+    <!-- ── 2-3 événements : grille ── -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="events-grid">
+      {% for event in upcoming_events %}
+      <div class="event-card-wrapper" data-type="{{ event.event_type }}">
+        {% include 'events/_card_full.html' %}
+      </div>
+      {% endfor %}
+    </div>
+
+    {% else %}
+    <!-- ── 4+ événements : carrousel ── -->
+    <div class="relative" id="carousel-root">
+      <!-- Contrôles -->
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex gap-2 overflow-x-auto pb-1" id="type-filters-carousel"
+             style="scrollbar-width:none;">
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0 ml-3">
+          <button class="c-btn" id="c-prev" onclick="carouselSlide(-1)" aria-label="Précédent">
+            <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <button class="c-btn" id="c-next" onclick="carouselSlide(1)" aria-label="Suivant">
+            <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Wrapper -->
+      <div class="carousel-wrapper" id="c-wrapper">
+        <div class="carousel-track" id="c-track">
+          {% for event in upcoming_events %}
+          <div class="event-card-wrapper" data-type="{{ event.event_type }}"
+               style="width: calc((100% - 3rem) / 3);">
+            {% include 'events/_card_full.html' %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Dégradés bords -->
+      <div class="absolute left-0 top-0 bottom-0 w-6 pointer-events-none"
+           style="background:linear-gradient(to right,#f3f4f2,transparent);z-index:2;"></div>
+      <div class="absolute right-0 top-0 bottom-0 w-6 pointer-events-none"
+           style="background:linear-gradient(to left,#f3f4f2,transparent);z-index:2;"></div>
+
+      <!-- Dots + compteur -->
+      <div class="flex items-center justify-center gap-3 mt-5">
+        <div class="flex gap-1.5" id="c-dots"></div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Message aucun résultat filtre -->
+    <div id="no-filter-msg" class="hidden text-center py-12 text-gray-400">
+      <p class="text-sm">Aucun événement de ce type pour le moment.</p>
+      <button onclick="filterType('all', document.querySelector('.filter-tab'))"
+              class="text-green-700 hover:underline text-xs mt-1">Voir tous les événements</button>
+    </div>
+
+  </section>
+  {% endif %}
+
+  <!-- ── Aucun événement ── -->
+  {% if not upcoming_events %}
+  <div class="text-center py-24">
+    <div class="w-20 h-20 rounded-full mx-auto mb-5 flex items-center justify-center" style="background:#f0fdf4;">
+      <svg class="w-10 h-10" style="color:#1a6b3a;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+      </svg>
+    </div>
+    <h3 class="text-xl font-bold text-gray-800 mb-2" style="font-family:'Sora',sans-serif;">
+      Aucun événement à venir
+    </h3>
+    <p class="text-gray-400 text-sm max-w-xs mx-auto">
+      Revenez bientôt — de nouveaux événements seront annoncés prochainement.
+    </p>
+  </div>
+  {% endif %}
+
+  <!-- ── Événements passés ── -->
+  {% if past_events %}
+  <section>
+    <div class="flex items-center gap-4 mb-6">
+      <div class="w-1 h-8 rounded-full bg-gray-200"></div>
+      <div>
+        <h2 class="text-lg font-bold text-gray-400" style="font-family:'Sora',sans-serif;">Éditions passées</h2>
+        <p class="text-xs text-gray-300 mt-0.5">{{ past_events.count }} événement{{ past_events.count|pluralize }}</p>
+      </div>
+    </div>
+
+    <!-- Grille passés : compacte -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {% for event in past_events %}
+      <a href="{{ event.get_absolute_url }}"
+         class="flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-100 hover:border-gray-300 hover:shadow-sm transition-all opacity-65 hover:opacity-100 group">
+        <div class="w-11 h-11 rounded-xl flex-shrink-0 flex items-center justify-center" style="background:#f3f4f6;">
+          <svg class="w-5 h-5 text-gray-400 group-hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="font-semibold text-gray-700 text-sm truncate group-hover:text-gray-900"
+             style="font-family:'Sora',sans-serif;">{{ event.title }}</p>
+          <div class="flex items-center gap-2 mt-0.5">
+            <p class="text-xs text-gray-400">{{ event.start_datetime|date:"d F Y" }}</p>
+            <span class="text-gray-200">·</span>
+            <p class="text-xs text-gray-400">{{ event.get_event_type_display }}</p>
+          </div>
+        </div>
+        <svg class="w-4 h-4 text-gray-300 group-hover:text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+</div>
+
+<!-- ══ BANDEAU LASPAD ══ -->
+<section style="background:#0f1f15;" class="mt-8">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+      <div>
+        <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color:#c9a227;">À propos</p>
+        <h2 class="text-3xl font-bold text-white mb-4" style="font-family:'Sora',sans-serif;">
+          Le LASPAD, acteur de la recherche africaine
+        </h2>
+        <p class="leading-relaxed text-sm mb-6" style="color:rgba(255,255,255,.55);">
+          Le Laboratoire d'Analyse des Sociétés et Pouvoirs / Afrique – Diasporas organise
+          régulièrement des événements scientifiques pour renforcer les capacités analytiques en Afrique.
+        </p>
+        <a href="mailto:contact@laspad.sn" class="btn-gold">Nous contacter</a>
+      </div>
+      <div class="flex justify-center">
+        <img src="{% static 'img/logo.png' %}" alt="LASPAD"
+             class="h-28 w-auto object-contain opacity-75"
+             style="filter:brightness(0) invert(1);">
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+// ═══════════════════════════════════════════════════
+// FILTRE PAR TYPE
+// ═══════════════════════════════════════════════════
+function filterType(type, btn) {
+  // Mettre à jour les boutons actifs
+  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  const wrappers = document.querySelectorAll('.event-card-wrapper');
+  let visible = 0;
+  wrappers.forEach(w => {
+    const match = type === 'all' || w.dataset.type === type;
+    w.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+
+  const noMsg = document.getElementById('no-filter-msg');
+  if (noMsg) noMsg.classList.toggle('hidden', visible > 0);
+
+  // Si carrousel, recalculer
+  if (typeof carouselGoTo === 'function') carouselGoTo(0);
+}
+
+// ═══════════════════════════════════════════════════
+// CARROUSEL (4+ événements)
+// ═══════════════════════════════════════════════════
+(function() {
+  const track   = document.getElementById('c-track');
+  const wrapper = document.getElementById('c-wrapper');
+  const dotsEl  = document.getElementById('c-dots');
+  const btnPrev = document.getElementById('c-prev');
+  const btnNext = document.getElementById('c-next');
+
+  if (!track || !wrapper) return;
+
+  const GAP     = 24;
+  const AUTO_MS = 4000;
+
+  let current   = 0;
+  let autoTimer = null;
+  let isDrag    = false;
+  let dragStart = 0;
+  let dragDelta = 0;
+
+  function visibleCount() {
+    const w = wrapper.offsetWidth;
+    if (w >= 1024) return 3;
+    if (w >= 640)  return 2;
+    return 1;
+  }
+
+  function getCards() {
+    return [...track.querySelectorAll('.event-card-wrapper')]
+      .filter(c => c.style.display !== 'none');
+  }
+
+  function cardW() {
+    const cards = getCards();
+    if (!cards.length) return wrapper.offsetWidth;
+    return (wrapper.offsetWidth - GAP * (visibleCount() - 1)) / visibleCount() + GAP;
+  }
+
+  function maxIdx() {
+    return Math.max(0, getCards().length - visibleCount());
+  }
+
+  function buildDots() {
+    if (!dotsEl) return;
+    dotsEl.innerHTML = '';
+    const total = maxIdx() + 1;
+    for (let i = 0; i < total; i++) {
+      const d = document.createElement('button');
+      d.className = 'c-dot' + (i === current ? ' active' : '');
+      d.onclick   = () => { carouselGoTo(i); resetAuto(); };
+      dotsEl.appendChild(d);
+    }
+  }
+
+  function updateDots() {
+    dotsEl?.querySelectorAll('.c-dot').forEach((d, i) => d.classList.toggle('active', i === current));
+  }
+
+  function updateBtns() {
+    if (btnPrev) btnPrev.disabled = current === 0;
+    if (btnNext) btnNext.disabled = current >= maxIdx();
+  }
+
+  window.carouselGoTo = function(idx) {
+    current = Math.max(0, Math.min(idx, maxIdx()));
+    track.style.transform = `translateX(-${current * cardW()}px)`;
+    updateDots();
+    updateBtns();
+  };
+
+  window.carouselSlide = function(dir) {
+    carouselGoTo(current + dir);
+    resetAuto();
+  };
+
+  function startAuto() {
+    autoTimer = setInterval(() => {
+      carouselGoTo(current < maxIdx() ? current + 1 : 0);
+    }, AUTO_MS);
+  }
+  function resetAuto() { clearInterval(autoTimer); startAuto(); }
+  function stopAuto()  { clearInterval(autoTimer); }
+
+  // ── Drag souris ──
+  wrapper.addEventListener('mousedown', e => {
+    isDrag = true; dragStart = e.clientX; dragDelta = 0;
+    track.style.transition = 'none'; stopAuto();
+  });
+  window.addEventListener('mousemove', e => {
+    if (!isDrag) return;
+    dragDelta = e.clientX - dragStart;
+    track.style.transform = `translateX(${-current * cardW() + dragDelta}px)`;
+  });
+  window.addEventListener('mouseup', () => {
+    if (!isDrag) return;
+    isDrag = false;
+    track.style.transition = 'transform .45s cubic-bezier(.4,0,.2,1)';
+    const thr = cardW() * .25;
+    if (dragDelta < -thr) carouselGoTo(current + 1);
+    else if (dragDelta > thr) carouselGoTo(current - 1);
+    else carouselGoTo(current);
+    resetAuto();
+  });
+
+  // ── Touch ──
+  wrapper.addEventListener('touchstart', e => {
+    dragStart = e.touches[0].clientX; dragDelta = 0;
+    track.style.transition = 'none'; stopAuto();
+  }, { passive: true });
+  wrapper.addEventListener('touchmove', e => {
+    dragDelta = e.touches[0].clientX - dragStart;
+    track.style.transform = `translateX(${-current * cardW() + dragDelta}px)`;
+  }, { passive: true });
+  wrapper.addEventListener('touchend', () => {
+    track.style.transition = 'transform .45s cubic-bezier(.4,0,.2,1)';
+    const thr = cardW() * .25;
+    if (dragDelta < -thr) carouselGoTo(current + 1);
+    else if (dragDelta > thr) carouselGoTo(current - 1);
+    else carouselGoTo(current);
+    resetAuto();
+  });
+
+  // ── Resize ──
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      buildDots();
+      carouselGoTo(Math.min(current, maxIdx()));
+    }, 150);
+  });
+
+  // Init
+  buildDots();
+  carouselGoTo(0);
+  startAuto();
+})();
+</script>
+
+{% endblock %}

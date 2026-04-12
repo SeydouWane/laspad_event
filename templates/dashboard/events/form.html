@@ -1,0 +1,862 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block title %}{{ action }} un événement{% endblock %}
+{% block page_title %}{{ action }} un événement{% endblock %}
+{% block page_subtitle %}Configurez tous les détails de votre événement{% endblock %}
+
+{% block header_actions %}
+  <a href="{% url 'dashboard:event_list' %}" class="btn-sm bg-gray-100 text-gray-700 hover:bg-gray-200">
+    ← Retour à la liste
+  </a>
+{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data" novalidate id="event-form">
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="rounded-xl px-4 py-3 text-sm mb-6 flex items-start gap-3" style="background:#fef2f2;border:1px solid #fecaca;">
+      <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <div class="text-red-700">{% for error in form.non_field_errors %}{{ error }}{% endfor %}</div>
+    </div>
+  {% endif %}
+
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+    <!-- ══ COLONNE PRINCIPALE ══ -->
+    <div class="xl:col-span-2 space-y-5">
+
+      <!-- ── 1. Infos générales ── -->
+      <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center gap-3" style="background:#f8faf9;">
+          <div class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold" style="background:#1a6b3a;">1</div>
+          <h2 class="font-semibold text-gray-900" style="font-family:'Sora',sans-serif;">Informations générales</h2>
+        </div>
+        <div class="p-6 space-y-5">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Titre <span class="text-red-500">*</span></label>
+            {{ form.title }}
+            {% if form.title.errors %}<p class="text-red-500 text-xs mt-1">{{ form.title.errors.0 }}</p>{% endif %}
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1.5">Type</label>
+              {{ form.event_type }}
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1.5">Statut</label>
+              {{ form.status }}
+              <p class="text-xs text-gray-400 mt-1">Choisir "Publié" pour rendre visible sur le site.</p>
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Description <span class="text-red-500">*</span></label>
+            {{ form.description }}
+            {% if form.description.errors %}<p class="text-red-500 text-xs mt-1">{{ form.description.errors.0 }}</p>{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 2. Dates ── -->
+      <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center gap-3" style="background:#f8faf9;">
+          <div class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold" style="background:#1a6b3a;">2</div>
+          <h2 class="font-semibold text-gray-900" style="font-family:'Sora',sans-serif;">Dates et horaires</h2>
+        </div>
+        <div class="p-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1.5">Début <span class="text-red-500">*</span></label>
+              {{ form.start_datetime }}
+              {% if form.start_datetime.errors %}<p class="text-red-500 text-xs mt-1">{{ form.start_datetime.errors.0 }}</p>{% endif %}
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1.5">Fin <span class="text-red-500">*</span></label>
+              {{ form.end_datetime }}
+              {% if form.end_datetime.errors %}<p class="text-red-500 text-xs mt-1">{{ form.end_datetime.errors.0 }}</p>{% endif %}
+            </div>
+          </div>
+          <div id="duration-display" class="mt-4 hidden">
+            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm" style="background:#f0fdf4;border:1px solid #bbf7d0;">
+              <svg class="w-4 h-4" style="color:#1a6b3a;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span style="color:#1a6b3a;font-weight:600;" id="duration-text"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 3. Format & Lieu ── -->
+      <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center gap-3" style="background:#f8faf9;">
+          <div class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold" style="background:#1a6b3a;">3</div>
+          <h2 class="font-semibold text-gray-900" style="font-family:'Sora',sans-serif;">Format et lieu</h2>
+        </div>
+        <div class="p-6 space-y-5">
+
+          <!-- Champs cachés -->
+          <div class="hidden">
+            {{ location_form.mode }}
+            {{ form.participation_mode }}
+          </div>
+
+          <!-- Sélecteur format physique -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-3">Format de l'événement <span class="text-red-500">*</span></label>
+            <div class="grid grid-cols-3 gap-3">
+              <button type="button" onclick="setFormat('online')" id="btn-fmt-online"
+                      class="flex flex-col items-center gap-2.5 p-4 rounded-xl border-2 transition-all focus:outline-none">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center" id="icon-fmt-online" style="background:#f0fdf4;">
+                  <svg class="w-5 h-5" style="color:#1a6b3a;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                  </svg>
+                </div>
+                <span class="text-xs font-bold" id="label-fmt-online" style="color:#1a6b3a;">En ligne</span>
+                <span class="text-xs text-gray-400 text-center">Meet, Zoom, YouTube</span>
+              </button>
+
+              <button type="button" onclick="setFormat('onsite')" id="btn-fmt-onsite"
+                      class="flex flex-col items-center gap-2.5 p-4 rounded-xl border-2 border-gray-200 bg-white transition-all focus:outline-none">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-100" id="icon-fmt-onsite">
+                  <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  </svg>
+                </div>
+                <span class="text-xs font-bold text-gray-500" id="label-fmt-onsite">Présentiel</span>
+                <span class="text-xs text-gray-400 text-center">Salle, campus</span>
+              </button>
+
+              <button type="button" onclick="setFormat('hybrid')" id="btn-fmt-hybrid"
+                      class="flex flex-col items-center gap-2.5 p-4 rounded-xl border-2 border-gray-200 bg-white transition-all focus:outline-none">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-100" id="icon-fmt-hybrid">
+                  <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                  </svg>
+                </div>
+                <span class="text-xs font-bold text-gray-500" id="label-fmt-hybrid">Hybride</span>
+                <span class="text-xs text-gray-400 text-center">Présentiel + en ligne</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- BLOC EN LIGNE -->
+          <div id="bloc-online" class="space-y-4">
+            <div class="flex items-center gap-3">
+              <div class="h-px flex-1 bg-gray-100"></div>
+              <span class="text-xs font-bold text-gray-400 uppercase tracking-wider px-2">🌐 Diffusion en ligne</span>
+              <div class="h-px flex-1 bg-gray-100"></div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Plateforme</label>
+                {{ location_form.platform }}
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Lien de diffusion</label>
+                {{ location_form.online_link }}
+              </div>
+            </div>
+            <div id="link-preview" class="hidden items-center gap-2 px-3 py-2 rounded-lg text-sm" style="background:#eff6ff;border:1px solid #bfdbfe;">
+              <a id="link-preview-url" href="#" target="_blank" class="text-blue-600 hover:underline truncate text-xs">Aperçu du lien</a>
+            </div>
+          </div>
+
+          <!-- BLOC PRÉSENTIEL -->
+          <div id="bloc-onsite" class="hidden space-y-4">
+            <div class="flex items-center gap-3">
+              <div class="h-px flex-1 bg-gray-100"></div>
+              <span class="text-xs font-bold text-gray-400 uppercase tracking-wider px-2">🏛️ Adresse physique</span>
+              <div class="h-px flex-1 bg-gray-100"></div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div class="sm:col-span-3">
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Adresse complète</label>
+                {{ location_form.address }}
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Ville</label>
+                {{ location_form.city }}
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Pays</label>
+                {{ location_form.country }}
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+                  Lien Google Maps <span class="text-xs font-normal text-gray-400">(optionnel)</span>
+                </label>
+                <div class="flex gap-2">
+                  {{ location_form.google_maps_url }}
+                  <button type="button" onclick="generateMapLink()"
+                          class="flex-shrink-0 px-3 py-2 rounded-lg text-xs font-bold whitespace-nowrap"
+                          style="background:#f0fdf4;color:#1a6b3a;border:1.5px solid #bbf7d0;">
+                    📍 Générer
+                  </button>
+                </div>
+              </div>
+            </div>
+            <!-- Carte preview -->
+            <div id="map-preview-container" class="hidden">
+              <div class="rounded-xl overflow-hidden border border-gray-200" style="height:180px;">
+                <iframe id="map-iframe" src="" width="100%" height="180" style="border:0;" loading="lazy"></iframe>
+              </div>
+              <a id="map-open-link" href="#" target="_blank" class="text-xs text-blue-600 hover:underline mt-1 inline-block">Ouvrir dans Maps ↗</a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── 4. Capacité & Accès ── -->
+      <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center gap-3" style="background:#f8faf9;">
+          <div class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold" style="background:#1a6b3a;">4</div>
+          <h2 class="font-semibold text-gray-900" style="font-family:'Sora',sans-serif;">Capacité et accès</h2>
+        </div>
+        <div class="p-6 space-y-6">
+
+          <!-- Mode non-hybride -->
+          <div id="bloc-access-simple">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Mode d'inscription</label>
+            <div class="hidden">{{ form.access_mode }}</div>
+            <div class="grid grid-cols-2 gap-3">
+              <button type="button" onclick="setAccess('direct')" id="btn-direct"
+                      class="flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all"
+                      style="border-color:#1a6b3a;background:#f0fdf4;">
+                <svg class="w-5 h-5 mt-0.5 flex-shrink-0" style="color:#1a6b3a;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <div>
+                  <p class="text-sm font-semibold" style="color:#1a6b3a;">Inscription directe</p>
+                  <p class="text-xs text-gray-500 mt-0.5">Acceptée automatiquement</p>
+                </div>
+              </button>
+              <button type="button" onclick="setAccess('validation')" id="btn-validation"
+                      class="flex items-start gap-3 p-4 rounded-xl border-2 border-gray-200 text-left transition-all">
+                <svg class="w-5 h-5 mt-0.5 flex-shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                </svg>
+                <div>
+                  <p class="text-sm font-semibold text-gray-700">Avec validation</p>
+                  <p class="text-xs text-gray-500 mt-0.5">Vous examinez chaque demande</p>
+                </div>
+              </button>
+            </div>
+
+            <!-- Capacité simple -->
+            <div class="mt-4 rounded-xl border border-gray-200 overflow-hidden">
+              <label class="flex items-center gap-3 px-5 py-4 cursor-pointer hover:bg-gray-50">
+                {{ form.is_capacity_limited }}
+                <div>
+                  <p class="text-sm font-semibold text-gray-800">Limiter le nombre de participants</p>
+                  <p class="text-xs text-gray-400 mt-0.5">Ferme les inscriptions une fois la capacité atteinte</p>
+                </div>
+              </label>
+              <div id="capacity-field" class="hidden px-5 pb-4 border-t border-gray-100 pt-4 bg-gray-50">
+                <label class="block text-sm font-semibold text-gray-700 mb-1.5">Nombre maximum</label>
+                <div class="flex items-center gap-3">
+                  {{ form.max_participants }}
+                  <span class="text-sm text-gray-500">participants max.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mode hybride — capacités séparées -->
+          <div id="bloc-access-hybrid" class="hidden space-y-4">
+            <p class="text-sm font-semibold text-gray-700">Configuration hybride</p>
+
+            <!-- Présentiel -->
+            <div class="rounded-xl border border-purple-200 overflow-hidden" style="background:#faf5ff;">
+              <div class="px-4 py-3 border-b border-purple-100 flex items-center gap-2">
+                <span class="text-sm font-bold text-purple-700">🏛️ Présentiel</span>
+              </div>
+              <div class="p-4 space-y-3">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">
+                      Places max <span class="font-normal text-gray-400">(vide = illimité)</span>
+                    </label>
+                    {{ form.max_onsite }}
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Mode d'accès</label>
+                    {{ form.access_onsite }}
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">
+                      Auto-accepter N premiers
+                      <span class="font-normal text-gray-400">(optionnel)</span>
+                    </label>
+                    {{ form.auto_accept_onsite }}
+                  </div>
+                </div>
+                <p class="text-xs text-gray-400">
+                  💡 "Auto-accepter N premiers" : les N premières inscriptions présentiel sont acceptées automatiquement, les suivantes passent en validation.
+                </p>
+              </div>
+            </div>
+
+            <!-- En ligne -->
+            <div class="rounded-xl border border-blue-200 overflow-hidden" style="background:#eff6ff;">
+              <div class="px-4 py-3 border-b border-blue-100 flex items-center gap-2">
+                <span class="text-sm font-bold text-blue-700">🌐 En ligne</span>
+              </div>
+              <div class="p-4 space-y-3">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">
+                      Places max <span class="font-normal text-gray-400">(vide = illimité)</span>
+                    </label>
+                    {{ form.max_online }}
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Mode d'accès</label>
+                    {{ form.access_online }}
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">
+                      Auto-accepter N premiers
+                      <span class="font-normal text-gray-400">(optionnel)</span>
+                    </label>
+                    {{ form.auto_accept_online }}
+                  </div>
+                </div>
+                <p class="text-xs text-gray-400">
+                  💡 Pour une validation de masse en ligne, laissez le mode sur "Avec validation" et utilisez le bouton "Accepter tous" dans le dashboard.
+                </p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── 5. Notification newsletter ── -->
+      <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center gap-3" style="background:#f8faf9;">
+          <div class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold" style="background:#c9a227;">5</div>
+          <div>
+            <h2 class="font-semibold text-gray-900" style="font-family:'Sora',sans-serif;">Newsletter</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Informer les abonnés LASPAD de ce nouvel événement</p>
+          </div>
+        </div>
+        <div class="p-6">
+          <div class="flex items-center gap-3 p-4 rounded-xl mb-4" style="background:#f0fdf4;border:1px solid #bbf7d0;">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:#1a6b3a;">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+            </div>
+            <div>
+              <p class="text-sm font-bold" style="color:#1a6b3a;">{{ newsletter_count }} abonné{{ newsletter_count|pluralize }} à la newsletter</p>
+              <p class="text-xs text-gray-500 mt-0.5">Ces personnes ont accepté de recevoir les actualités du LASPAD.</p>
+            </div>
+          </div>
+
+          {% if newsletter_count > 0 %}
+          <label class="flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all"
+                 id="notify-label" style="border-color:#c9a227;background:#fef9e7;"
+                 onclick="toggleNotify()">
+            <div class="flex-shrink-0 mt-0.5">
+              <div id="notify-toggle" class="w-11 h-6 rounded-full relative flex items-center transition-colors"
+                   style="background:#c9a227;">
+                <div id="notify-thumb" class="w-5 h-5 bg-white rounded-full shadow absolute transition-transform"
+                     style="transform:translateX(22px);left:1px;"></div>
+              </div>
+              <input type="hidden" name="notify_newsletter" id="notify-newsletter-input" value="1">
+            </div>
+            <div>
+              <p class="text-sm font-bold" style="color:#92400e;">Envoyer un email d'annonce aux abonnés</p>
+              <p class="text-xs text-gray-600 mt-1" id="notify-desc">
+                Un email sera envoyé à <strong>{{ newsletter_count }} abonné{{ newsletter_count|pluralize }}</strong> dès la publication.
+              </p>
+            </div>
+          </label>
+          {% else %}
+          <p class="text-sm text-gray-400 text-center py-4">Aucun abonné pour le moment.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- ── 6. Intervenants ── -->
+      <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between" style="background:#f8faf9;">
+          <div class="flex items-center gap-3">
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold" style="background:#1a6b3a;">6</div>
+            <h2 class="font-semibold text-gray-900" style="font-family:'Sora',sans-serif;">Intervenants</h2>
+          </div>
+          <a href="{% url 'dashboard:organizer_create' %}?next={% url 'dashboard:event_create' %}"
+             target="_blank"
+             class="text-xs font-semibold px-3 py-1.5 rounded-lg"
+             style="background:#f0fdf4;color:#1a6b3a;border:1px solid #bbf7d0;">
+            + Ajouter
+          </a>
+        </div>
+        <div class="p-6">
+          <div class="space-y-2">
+            {% for checkbox in form.speakers %}
+              <label class="flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:border-green-300 hover:bg-green-50 cursor-pointer transition-all">
+                {{ checkbox.tag }}
+                <span class="text-sm font-medium text-gray-800">{{ checkbox.choice_label }}</span>
+              </label>
+            {% empty %}
+              <div class="text-center py-8">
+                <p class="text-sm text-gray-400 mb-3">Aucun intervenant enregistré.</p>
+                <a href="{% url 'dashboard:organizer_create' %}?next={% url 'dashboard:event_create' %}"
+                   target="_blank" class="btn-sm btn-primary-sm text-xs">
+                  Ajouter le premier intervenant
+                </a>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 7. Participants pré-inscrits ── -->
+      <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 flex items-center gap-3" style="background:#f8faf9;">
+          <div class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold" style="background:#c9a227;">7</div>
+          <div>
+            <h2 class="font-semibold text-gray-900" style="font-family:'Sora',sans-serif;">Participants pré-inscrits</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Ajoutez des participants sans passer par le formulaire public</p>
+          </div>
+        </div>
+        <div class="p-6 space-y-4">
+          <div class="rounded-xl border-2 border-dashed border-gray-200 p-5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+              <input type="text"  id="new-p-firstname"   placeholder="Prénom *"      class="form-input text-sm">
+              <input type="text"  id="new-p-lastname"    placeholder="Nom *"          class="form-input text-sm">
+              <input type="email" id="new-p-email"       placeholder="Email *"        class="form-input text-sm">
+              <input type="text"  id="new-p-phone"       placeholder="Téléphone"      class="form-input text-sm">
+              <input type="text"  id="new-p-institution" placeholder="Institution *"  class="form-input text-sm">
+              <input type="text"  id="new-p-role"        placeholder="Fonction *"     class="form-input text-sm">
+            </div>
+            <div class="flex items-center gap-3">
+              <button type="button" onclick="addParticipant()"
+                      class="btn-sm px-4 py-2 font-semibold text-sm" style="background:#c9a227;color:#fff;">
+                + Ajouter
+              </button>
+              <p id="add-participant-error" class="text-xs text-red-500 hidden"></p>
+            </div>
+          </div>
+          <div id="participants-added-list" class="space-y-2 hidden">
+            <div class="flex items-center justify-between">
+              <p class="text-sm font-semibold text-gray-700">
+                À inscrire
+                <span id="participants-count" class="ml-2 text-xs font-bold px-2 py-0.5 rounded-full text-white" style="background:#c9a227;">0</span>
+              </p>
+              <button type="button" onclick="clearParticipants()" class="text-xs text-gray-400 hover:text-red-500">Tout effacer</button>
+            </div>
+            <div id="participants-cards" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
+          </div>
+          <div id="participants-hidden-fields"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ══ SIDEBAR ══ -->
+    <div class="space-y-5">
+
+      <!-- Bannière -->
+      <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-2" style="background:#f8faf9;">
+          <h3 class="font-semibold text-gray-900 text-sm" style="font-family:'Sora',sans-serif;">Affiche / Bannière</h3>
+        </div>
+        <div class="p-5">
+          <div id="banner-preview-container"
+               class="mb-4 rounded-xl overflow-hidden border-2 border-dashed border-gray-200 flex items-center justify-center cursor-pointer hover:border-green-300 transition-colors"
+               style="height:160px;background:#f9fafb;"
+               onclick="document.getElementById('{{ form.banner.id_for_label }}').click()">
+            {% if event and event.banner %}
+              <img src="{{ event.banner.url }}" class="w-full h-full object-cover">
+            {% else %}
+              <div class="text-center p-4">
+                <svg class="w-10 h-10 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                <p class="text-xs text-gray-400 font-medium">Cliquer pour choisir</p>
+                <p class="text-xs text-gray-300 mt-0.5">JPG, PNG — 1200×630px</p>
+              </div>
+            {% endif %}
+          </div>
+          <div class="hidden">{{ form.banner }}</div>
+          <button type="button" onclick="document.getElementById('{{ form.banner.id_for_label }}').click()"
+                  class="w-full btn-sm bg-gray-100 text-gray-700 hover:bg-gray-200 justify-center py-2">
+            Choisir une image
+          </button>
+          <p id="banner-filename" class="text-xs text-center text-gray-400 mt-2 truncate"></p>
+        </div>
+      </div>
+
+      <!-- Récapitulatif -->
+      <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100 flex items-center gap-2" style="background:#f8faf9;">
+          <h3 class="font-semibold text-gray-900 text-sm" style="font-family:'Sora',sans-serif;">Récapitulatif</h3>
+        </div>
+        <div class="p-5 space-y-3 text-sm">
+          <div class="flex justify-between items-center">
+            <span class="text-gray-500">Statut</span>
+            <span id="recap-status" class="font-semibold">—</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-gray-500">Type</span>
+            <span id="recap-type" class="font-medium text-gray-700">—</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-gray-500">Format</span>
+            <span id="recap-format" class="font-medium" style="color:#1a6b3a;">En ligne</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-gray-500">Accès</span>
+            <span id="recap-access" class="font-medium text-gray-700">Inscription directe</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-gray-500">Newsletter</span>
+            <span id="recap-newsletter" class="font-medium" style="color:#c9a227;">Oui</span>
+          </div>
+          <div class="flex justify-between items-center border-t border-gray-100 pt-3">
+            <span class="text-gray-500">Pré-inscrits</span>
+            <span id="recap-participants" class="font-semibold" style="color:#c9a227;">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Boutons -->
+      <div class="bg-white rounded-2xl border border-gray-200 p-5 space-y-3">
+        <button type="submit"
+                class="w-full py-3.5 rounded-xl text-white font-bold text-sm transition-all hover:shadow-lg hover:-translate-y-0.5"
+                style="background:linear-gradient(135deg,#1a6b3a,#2d8a52);font-family:'Sora',sans-serif;">
+          <span class="flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            {{ action }} l'événement
+          </span>
+        </button>
+        <a href="{% url 'dashboard:event_list' %}"
+           class="w-full py-2.5 rounded-xl border border-gray-200 text-gray-600 font-medium text-sm text-center hover:bg-gray-50 transition-colors block">
+          Annuler
+        </a>
+      </div>
+
+      <!-- Conseils -->
+      <div class="rounded-xl p-4 text-xs" style="background:#fffbeb;border:1px solid #fde68a;">
+        <p class="font-bold text-yellow-800 mb-2">💡 Conseils</p>
+        <ul class="text-yellow-700 space-y-1.5">
+          <li>› Choisir "Publié" pour rendre l'événement visible</li>
+          <li>› Le lien d'inscription est généré automatiquement</li>
+          <li>› Mode hybride = adresse physique + lien en ligne + capacités séparées</li>
+          <li>› Auto-accepter N = les N premiers sont validés automatiquement</li>
+          <li>› Après création, ajoutez le chronogramme depuis la fiche événement</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ═══════════════════════════════════
+// FORMAT (en ligne / présentiel / hybride)
+// ═══════════════════════════════════
+const FMT = {
+  online: { color:'#1a6b3a', bg:'#f0fdf4', iconBg:'#dcfce7', label:'En ligne',   partMode:'online_only',  locMode:'online'  },
+  onsite: { color:'#7c3aed', bg:'#f5f3ff', iconBg:'#ede9fe', label:'Présentiel', partMode:'onsite_only',  locMode:'onsite'  },
+  hybrid: { color:'#d97706', bg:'#fffbeb', iconBg:'#fef3c7', label:'Hybride',    partMode:'hybrid',       locMode:'hybrid'  },
+};
+
+let currentFormat = 'online';
+
+function setFormat(val) {
+  currentFormat = val;
+  const cfg = FMT[val];
+
+  // Boutons visuels
+  ['online','onsite','hybrid'].forEach(m => {
+    const btn  = document.getElementById(`btn-fmt-${m}`);
+    const icon = document.getElementById(`icon-fmt-${m}`);
+    const lbl  = document.getElementById(`label-fmt-${m}`);
+    if (!btn) return;
+    if (m === val) {
+      btn.style.borderColor = cfg.color;
+      btn.style.background  = cfg.bg;
+      icon.style.background = cfg.iconBg;
+      icon.querySelector('svg').style.color = cfg.color;
+      lbl.style.color = cfg.color;
+    } else {
+      btn.style.borderColor = '#e5e7eb';
+      btn.style.background  = '#fff';
+      icon.style.background = '#f3f4f6';
+      icon.querySelector('svg').style.color = '#9ca3af';
+      lbl.style.color = '#6b7280';
+    }
+  });
+
+  // Champs cachés
+  const partModeField = document.getElementById('id_participation_mode');
+  if (partModeField) partModeField.value = cfg.partMode;
+  const locModeField = document.getElementById('id_mode');
+  if (locModeField) locModeField.value = cfg.locMode;
+
+  // Blocs visibles
+  const showOnline = val === 'online' || val === 'hybrid';
+  const showOnsite = val === 'onsite' || val === 'hybrid';
+  document.getElementById('bloc-online').style.display = showOnline ? '' : 'none';
+  document.getElementById('bloc-onsite').style.display = showOnsite ? '' : 'none';
+
+  // Capacité : simple ou hybride
+  document.getElementById('bloc-access-simple').style.display = val === 'hybrid' ? 'none' : '';
+  document.getElementById('bloc-access-hybrid').style.display = val === 'hybrid' ? '' : 'none';
+
+  // Récap
+  document.getElementById('recap-format').textContent = cfg.label;
+  document.getElementById('recap-format').style.color  = cfg.color;
+}
+
+// ═══════════════════════════════════
+// ACCÈS (mode non-hybride)
+// ═══════════════════════════════════
+function setAccess(val) {
+  const sel = document.getElementById('id_access_mode');
+  if (sel) sel.value = val;
+  const labels = { direct:'Inscription directe', validation:'Avec validation' };
+  ['direct','validation'].forEach(a => {
+    const btn = document.getElementById(`btn-${a}`);
+    if (!btn) return;
+    btn.style.borderColor = a === val ? '#1a6b3a' : '#e5e7eb';
+    btn.style.background  = a === val ? '#f0fdf4' : '#fff';
+    const svg = btn.querySelector('svg');
+    const p   = btn.querySelector('p');
+    if (svg) svg.style.color = a === val ? '#1a6b3a' : '#9ca3af';
+    if (p)   p.style.color   = a === val ? '#1a6b3a' : '#374151';
+  });
+  document.getElementById('recap-access').textContent = labels[val] || val;
+}
+
+// ═══════════════════════════════════
+// CAPACITÉ simple
+// ═══════════════════════════════════
+const capCheck = document.getElementById('id_is_capacity_limited');
+const capField = document.getElementById('capacity-field');
+if (capCheck) {
+  function toggleCapacity() { capField.classList.toggle('hidden', !capCheck.checked); }
+  capCheck.addEventListener('change', toggleCapacity);
+}
+
+// ═══════════════════════════════════
+// APERÇU LIEN
+// ═══════════════════════════════════
+document.getElementById('id_online_link')?.addEventListener('input', function() {
+  const preview = document.getElementById('link-preview');
+  const url = this.value.trim();
+  if (url.startsWith('http')) {
+    preview.classList.remove('hidden'); preview.classList.add('flex');
+    document.getElementById('link-preview-url').href = url;
+    document.getElementById('link-preview-url').textContent = url;
+  } else {
+    preview.classList.add('hidden'); preview.classList.remove('flex');
+  }
+});
+
+// ═══════════════════════════════════
+// GOOGLE MAPS
+// ═══════════════════════════════════
+function generateMapLink() {
+  const address = document.getElementById('id_address')?.value?.trim();
+  const city    = document.getElementById('id_city')?.value?.trim();
+  const country = document.getElementById('id_country')?.value?.trim();
+  const full    = [address, city, country].filter(Boolean).join(', ');
+  if (!full) { alert("Renseignez d'abord l'adresse et la ville."); return; }
+  const encoded = encodeURIComponent(full);
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encoded}`;
+  const field   = document.getElementById('id_google_maps_url');
+  if (field) field.value = mapsUrl;
+  document.getElementById('map-iframe').src     = `https://maps.google.com/maps?q=${encoded}&output=embed`;
+  document.getElementById('map-open-link').href = mapsUrl;
+  document.getElementById('map-preview-container').classList.remove('hidden');
+}
+['id_address','id_city','id_country'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', () => {
+    document.getElementById('map-preview-container')?.classList.add('hidden');
+  });
+});
+
+// ═══════════════════════════════════
+// NEWSLETTER
+// ═══════════════════════════════════
+let notifyOn = true;
+function toggleNotify() {
+  notifyOn = !notifyOn;
+  const toggle = document.getElementById('notify-toggle');
+  const thumb  = document.getElementById('notify-thumb');
+  const label  = document.getElementById('notify-label');
+  const input  = document.getElementById('notify-newsletter-input');
+  const recap  = document.getElementById('recap-newsletter');
+  if (notifyOn) {
+    toggle.style.background = '#c9a227'; thumb.style.transform = 'translateX(22px)';
+    label.style.borderColor = '#c9a227'; label.style.background = '#fef9e7';
+    input.value = '1'; recap.textContent = 'Oui'; recap.style.color = '#c9a227';
+  } else {
+    toggle.style.background = '#d1d5db'; thumb.style.transform = 'translateX(2px)';
+    label.style.borderColor = '#e5e7eb'; label.style.background = '#f9fafb';
+    input.value = '0'; recap.textContent = 'Non'; recap.style.color = '#9ca3af';
+  }
+}
+
+// ═══════════════════════════════════
+// BANNIÈRE
+// ═══════════════════════════════════
+document.getElementById('{{ form.banner.id_for_label }}')?.addEventListener('change', function() {
+  if (!this.files?.[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const container = document.getElementById('banner-preview-container');
+    container.classList.remove('flex','items-center','justify-center');
+    container.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover cursor-pointer"
+                               onclick="document.getElementById('{{ form.banner.id_for_label }}').click()">`;
+    document.getElementById('banner-filename').textContent = this.files[0].name;
+  };
+  reader.readAsDataURL(this.files[0]);
+});
+
+// ═══════════════════════════════════
+// DURÉE
+// ═══════════════════════════════════
+function calcDuration() {
+  const s = document.getElementById('id_start_datetime')?.value;
+  const e = document.getElementById('id_end_datetime')?.value;
+  if (!s || !e) return;
+  const diff = (new Date(e) - new Date(s)) / 60000;
+  if (diff <= 0) { document.getElementById('duration-display').classList.add('hidden'); return; }
+  const h = Math.floor(diff/60), m = diff%60;
+  document.getElementById('duration-text').textContent = `Durée : ${h>0 ? h+'h' : ''}${m>0 ? m+'min' : ''}`;
+  document.getElementById('duration-display').classList.remove('hidden');
+}
+document.getElementById('id_start_datetime')?.addEventListener('change', calcDuration);
+document.getElementById('id_end_datetime')?.addEventListener('change', calcDuration);
+
+// ═══════════════════════════════════
+// RÉCAP STATUT & TYPE
+// ═══════════════════════════════════
+function updateRecap() {
+  const statusMap = { publie:'Publié', brouillon:'Brouillon', annule:'Annulé', termine:'Terminé' };
+  const statusCol = { publie:'#065f46', brouillon:'#374151', annule:'#991b1b', termine:'#6b7280' };
+  const typeMap   = { webinaire:'Webinaire', conference:'Conférence', atelier:'Atelier', seminaire:'Séminaire', autre:'Autre' };
+  const sv = document.getElementById('id_status')?.value;
+  const tv = document.getElementById('id_event_type')?.value;
+  const se = document.getElementById('recap-status');
+  const te = document.getElementById('recap-type');
+  if (se && sv) { se.textContent = statusMap[sv]||sv; se.style.color = statusCol[sv]||'#374151'; }
+  if (te && tv) te.textContent = typeMap[tv]||tv;
+}
+document.getElementById('id_status')?.addEventListener('change', updateRecap);
+document.getElementById('id_event_type')?.addEventListener('change', updateRecap);
+
+// ═══════════════════════════════════
+// PARTICIPANTS PRÉ-INSCRITS
+// ═══════════════════════════════════
+let participants = [];
+
+function addParticipant() {
+  const fn   = document.getElementById('new-p-firstname').value.trim();
+  const ln   = document.getElementById('new-p-lastname').value.trim();
+  const em   = document.getElementById('new-p-email').value.trim();
+  const ph   = document.getElementById('new-p-phone').value.trim();
+  const inst = document.getElementById('new-p-institution').value.trim();
+  const role = document.getElementById('new-p-role').value.trim();
+  const err  = document.getElementById('add-participant-error');
+
+  if (!fn || !ln || !em || !inst || !role) {
+    err.textContent = 'Prénom, Nom, Email, Institution et Fonction sont obligatoires.';
+    err.classList.remove('hidden'); return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
+    err.textContent = 'Email invalide.'; err.classList.remove('hidden'); return;
+  }
+  if (participants.find(p => p.email === em)) {
+    err.textContent = 'Cet email est déjà dans la liste.'; err.classList.remove('hidden'); return;
+  }
+  err.classList.add('hidden');
+  participants.push({ fn, ln, em, ph, inst, role });
+  renderParticipants();
+  ['new-p-firstname','new-p-lastname','new-p-email','new-p-phone','new-p-institution','new-p-role']
+    .forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('new-p-firstname').focus();
+}
+
+function removeParticipant(idx) { participants.splice(idx,1); renderParticipants(); }
+function clearParticipants()    { participants = []; renderParticipants(); }
+
+function renderParticipants() {
+  const list    = document.getElementById('participants-cards');
+  const wrapper = document.getElementById('participants-added-list');
+  const hidden  = document.getElementById('participants-hidden-fields');
+  const count   = document.getElementById('participants-count');
+  const recap   = document.getElementById('recap-participants');
+  list.innerHTML = ''; hidden.innerHTML = '';
+  if (participants.length === 0) { wrapper.classList.add('hidden'); recap.textContent = '0'; return; }
+  wrapper.classList.remove('hidden');
+  count.textContent = recap.textContent = participants.length;
+  participants.forEach((p, i) => {
+    list.innerHTML += `
+      <div class="flex items-center justify-between p-3 rounded-xl border border-gray-100" style="background:#fafafa;">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style="background:#1a6b3a;">
+            ${p.fn[0].toUpperCase()}${p.ln[0].toUpperCase()}
+          </div>
+          <div class="min-w-0">
+            <p class="text-sm font-semibold text-gray-900 truncate">${p.fn} ${p.ln}</p>
+            <p class="text-xs text-gray-400 truncate">${p.em} · ${p.inst}</p>
+          </div>
+        </div>
+        <button type="button" onclick="removeParticipant(${i})"
+                class="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 flex-shrink-0 ml-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>`;
+    const names = {fn:'pre_first_name',ln:'pre_last_name',em:'pre_email',ph:'pre_phone',inst:'pre_institution',role:'pre_role'};
+    Object.entries(names).forEach(([k,name]) => {
+      hidden.innerHTML += `<input type="hidden" name="${name}[]" value="${p[k].replace(/"/g,'&quot;')}">`;
+    });
+  });
+}
+document.getElementById('new-p-role')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); addParticipant(); }
+});
+
+// ═══════════════════════════════════
+// INITIALISATION
+// ═══════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  // Détecter le format existant (modification d'un événement)
+  const partModeVal = document.getElementById('id_participation_mode')?.value || 'online_only';
+  const fmtInit = partModeVal === 'onsite_only' ? 'onsite' : partModeVal === 'hybrid' ? 'hybrid' : 'online';
+  setFormat(fmtInit);
+
+  const accessVal = document.getElementById('id_access_mode')?.value || 'direct';
+  setAccess(accessVal);
+
+  if (capCheck) toggleCapacity();
+  updateRecap();
+  calcDuration();
+
+  // Newsletter init
+  const recapNews = document.getElementById('recap-newsletter');
+  if (recapNews) { recapNews.textContent = 'Oui'; recapNews.style.color = '#c9a227'; }
+
+  // Lien déjà renseigné
+  const linkInput = document.getElementById('id_online_link');
+  if (linkInput?.value?.trim().startsWith('http')) linkInput.dispatchEvent(new Event('input'));
+});
+</script>
+{% endblock %}

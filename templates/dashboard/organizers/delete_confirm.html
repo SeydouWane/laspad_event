@@ -1,0 +1,53 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block title %}Supprimer {{ organizer.user.get_full_name }}{% endblock %}
+{% block page_title %}Confirmer la suppression{% endblock %}
+
+{% block content %}
+<div class="max-w-lg">
+  <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+    <div class="px-6 py-5" style="background:linear-gradient(135deg,#7f1d1d,#dc2626);">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0" style="background:rgba(255,255,255,.15);">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-white font-bold text-lg" style="font-family:'Sora',sans-serif;">Supprimer l'intervenant</p>
+          <p class="text-red-200 text-sm mt-0.5">Cette action est irréversible.</p>
+        </div>
+      </div>
+    </div>
+    <div class="p-6">
+      <div class="flex items-center gap-4 p-4 rounded-xl mb-6" style="background:#f9fafb;border:1px solid #e5e7eb;">
+        {% if organizer.photo %}
+          <img src="{{ organizer.photo.url }}" class="w-12 h-12 rounded-xl object-cover flex-shrink-0">
+        {% else %}
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold flex-shrink-0" style="background:#1a6b3a;">
+            {{ organizer.user.first_name|first|upper }}{{ organizer.user.last_name|first|upper }}
+          </div>
+        {% endif %}
+        <div>
+          <p class="font-bold text-gray-900">{{ organizer.user.get_full_name }}</p>
+          <p class="text-sm text-gray-500">{{ organizer.institution }}</p>
+          <p class="text-xs text-gray-400 mt-0.5">{{ organizer.speaking_events.count }} événement{{ organizer.speaking_events.count|pluralize }} associé{{ organizer.speaking_events.count|pluralize }}</p>
+        </div>
+      </div>
+      <div class="flex gap-3">
+        <a href="{% url 'dashboard:organizer_list' %}"
+           class="flex-1 py-3 rounded-xl border border-gray-200 text-gray-700 font-semibold text-sm text-center hover:bg-gray-50 transition-colors">
+          Annuler
+        </a>
+        <form method="post" class="flex-1">
+          {% csrf_token %}
+          <button type="submit" class="w-full py-3 rounded-xl text-white font-bold text-sm"
+                  style="background:linear-gradient(135deg,#dc2626,#b91c1c);">
+            Supprimer
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

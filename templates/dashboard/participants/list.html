@@ -1,0 +1,331 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block title %}Participants{% endblock %}
+{% block page_title %}Participants{% endblock %}
+{% block page_subtitle %}{{ participants.count }} participant{{ participants.count|pluralize }} unique{{ participants.count|pluralize }} enregistré{{ participants.count|pluralize }}{% endblock %}
+
+{% block content %}
+
+<!-- ── Filtres + Recherche ── -->
+<div class="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-4">
+  <div class="px-6 py-4 flex flex-wrap items-center gap-3">
+
+    <!-- Recherche -->
+    <div class="flex-1 min-w-48">
+      <div class="relative">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <input type="text" id="p-search"
+               placeholder="Rechercher par nom, email, institution..."
+               class="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-green-400"
+               oninput="applyFilters()">
+      </div>
+    </div>
+
+    <!-- Filtre newsletter -->
+    <div class="flex gap-1">
+      <button onclick="setFilter('newsletter','all')" id="fn-all"
+              class="p-filter-btn text-xs px-3 py-1.5 rounded-lg font-semibold transition-all"
+              style="background:#1a6b3a;color:#fff;">Tous</button>
+      <button onclick="setFilter('newsletter','yes')" id="fn-yes"
+              class="p-filter-btn text-xs px-3 py-1.5 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-green-50 hover:text-green-700 transition-all">
+        ✓ Newsletter</button>
+      <button onclick="setFilter('newsletter','no')" id="fn-no"
+              class="p-filter-btn text-xs px-3 py-1.5 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all">
+        Non abonné</button>
+    </div>
+
+    <!-- Filtre mode participation -->
+    <div class="flex gap-1">
+      <button onclick="setFilter('mode','all')" id="fm-all"
+              class="m-filter-btn text-xs px-3 py-1.5 rounded-lg font-semibold transition-all"
+              style="background:#1f2937;color:#fff;">Tous modes</button>
+      <button onclick="setFilter('mode','onsite')" id="fm-onsite"
+              class="m-filter-btn text-xs px-3 py-1.5 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-purple-50 hover:text-purple-700 transition-all">
+        🏛️</button>
+      <button onclick="setFilter('mode','online')" id="fm-online"
+              class="m-filter-btn text-xs px-3 py-1.5 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition-all">
+        🌐</button>
+      <button onclick="setFilter('mode','both')" id="fm-both"
+              class="m-filter-btn text-xs px-3 py-1.5 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-amber-50 hover:text-amber-700 transition-all">
+        🔀</button>
+    </div>
+
+    <!-- Tri -->
+    <select id="p-sort" onchange="applyFilters()"
+            class="text-xs border border-gray-200 rounded-lg px-2 py-2 focus:outline-none focus:border-green-400 text-gray-600">
+      <option value="name">Trier : Nom A→Z</option>
+      <option value="name_desc">Trier : Nom Z→A</option>
+      <option value="date_desc">Trier : Plus récent</option>
+      <option value="date_asc">Trier : Plus ancien</option>
+      <option value="events_desc">Trier : + d'événements</option>
+    </select>
+
+  </div>
+</div>
+
+<!-- ── Table ── -->
+<div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="table w-full" id="p-table">
+      <thead>
+        <tr>
+          <th class="text-left">Participant</th>
+          <th class="text-left">Institution</th>
+          <th class="text-left">Téléphone</th>
+          <th class="text-left">Événements</th>
+          <th class="text-left">Newsletter</th>
+          <th class="text-left">Inscrit le</th>
+          <th class="text-left">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="p-tbody">
+        {% for p in participants %}
+        <tr class="p-row"
+            data-name="{{ p.full_name|lower }}"
+            data-email="{{ p.email|lower }}"
+            data-institution="{{ p.institution|lower }}"
+            data-newsletter="{% if p.newsletter %}yes{% else %}no{% endif %}"
+            data-modes="{% for reg in p.registrations.all %}{{ reg.participation_type }} {% endfor %}"
+            data-events="{{ p.event_count }}"
+            data-date="{{ p.created_at|date:'Y-m-d' }}"
+            data-search="{{ p.full_name|lower }} {{ p.email|lower }} {{ p.institution|lower }} {{ p.role|lower }}">
+
+          <td>
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                   style="background:linear-gradient(135deg,#1a6b3a,#2d8a52);">
+                {{ p.first_name|first|upper }}{{ p.last_name|first|upper }}
+              </div>
+              <div>
+                <div class="font-semibold text-gray-900 text-sm">{{ p.full_name }}</div>
+                <div class="text-xs text-gray-400">{{ p.email }}</div>
+                <div class="text-xs text-gray-400">{{ p.role }}</div>
+              </div>
+            </div>
+          </td>
+
+          <td class="text-sm text-gray-700">{{ p.institution|default:"—" }}</td>
+
+          <td class="text-sm text-gray-500">{{ p.phone|default:"—" }}</td>
+
+          <td>
+            <div class="flex items-center gap-1.5">
+              <span class="font-semibold text-gray-900 text-sm">{{ p.event_count }}</span>
+              <span class="text-gray-400 text-xs">événement{{ p.event_count|pluralize }}</span>
+            </div>
+            <div class="flex flex-wrap gap-1 mt-1">
+              {% for reg in p.registrations.all %}
+                {% if reg.participation_type == 'onsite' %}
+                  <span class="text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-600" title="{{ reg.event.title }}">🏛️</span>
+                {% elif reg.participation_type == 'online' %}
+                  <span class="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-600" title="{{ reg.event.title }}">🌐</span>
+                {% elif reg.participation_type == 'both' %}
+                  <span class="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-600" title="{{ reg.event.title }}">🔀</span>
+                {% endif %}
+              {% endfor %}
+            </div>
+          </td>
+
+          <td>
+            {% if p.newsletter %}
+              <span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">✓ Abonné</span>
+            {% else %}
+              <span class="text-xs text-gray-400">—</span>
+            {% endif %}
+          </td>
+
+          <td class="text-xs text-gray-500 whitespace-nowrap">{{ p.created_at|date:"d/m/Y" }}</td>
+
+          <td>
+            <a href="{% url 'dashboard:contact_participant' pk=p.pk %}"
+               class="btn-sm text-xs bg-purple-50 text-purple-700 hover:bg-purple-100">
+              ✉ Contacter
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr id="empty-row">
+          <td colspan="7" class="text-center py-12 text-gray-400">
+            <svg class="w-10 h-10 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            Aucun participant enregistré.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Aucun résultat filtre -->
+  <div id="no-result-msg" class="hidden text-center py-10 text-gray-400 border-t border-gray-100">
+    <svg class="w-8 h-8 mx-auto mb-2 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+    </svg>
+    <p class="text-sm font-medium">Aucun participant ne correspond à votre recherche.</p>
+    <button onclick="resetFilters()" class="text-green-700 hover:underline text-xs mt-1">
+      Réinitialiser les filtres
+    </button>
+  </div>
+
+  <!-- Pagination -->
+  <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+    <p class="text-xs text-gray-500" id="p-pagination-info"></p>
+    <div class="flex gap-1" id="p-pagination-btns"></div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const PER_PAGE       = 10;
+let currentPage      = 1;
+let activeNewsletter = 'all';
+let activeMode       = 'all';
+
+function setFilter(type, val) {
+  if (type === 'newsletter') activeNewsletter = val;
+  if (type === 'mode')       activeMode       = val;
+  currentPage = 1;
+
+  if (type === 'newsletter') {
+    document.querySelectorAll('.p-filter-btn').forEach(b => {
+      b.style.background = '#f3f4f6'; b.style.color = '#4b5563';
+    });
+    const b = document.getElementById(`fn-${val}`);
+    if (b) { b.style.background = '#1a6b3a'; b.style.color = '#fff'; }
+  }
+  if (type === 'mode') {
+    document.querySelectorAll('.m-filter-btn').forEach(b => {
+      b.style.background = '#f3f4f6'; b.style.color = '#4b5563';
+    });
+    const b = document.getElementById(`fm-${val}`);
+    if (b) { b.style.background = '#1f2937'; b.style.color = '#fff'; }
+  }
+  applyFilters();
+}
+
+function applyFilters() {
+  const search = document.getElementById('p-search').value.toLowerCase().trim();
+  const sort   = document.getElementById('p-sort').value;
+  let rows     = [...document.querySelectorAll('.p-row')];
+
+  // Filtrer
+  const visible = rows.filter(row => {
+    const matchNewsletter = activeNewsletter === 'all' || row.dataset.newsletter === activeNewsletter;
+    const matchMode       = activeMode === 'all' || row.dataset.modes.includes(activeMode);
+    const matchSearch     = !search || row.dataset.search.includes(search);
+    return matchNewsletter && matchMode && matchSearch;
+  });
+
+  // Trier
+  visible.sort((a, b) => {
+    if (sort === 'name')        return a.dataset.name.localeCompare(b.dataset.name);
+    if (sort === 'name_desc')   return b.dataset.name.localeCompare(a.dataset.name);
+    if (sort === 'date_desc')   return b.dataset.date.localeCompare(a.dataset.date);
+    if (sort === 'date_asc')    return a.dataset.date.localeCompare(b.dataset.date);
+    if (sort === 'events_desc') return parseInt(b.dataset.events) - parseInt(a.dataset.events);
+    return 0;
+  });
+
+  // Masquer tout
+  rows.forEach(r => r.style.display = 'none');
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(visible.length / PER_PAGE));
+  if (currentPage > totalPages) currentPage = 1;
+  const start = (currentPage - 1) * PER_PAGE;
+  const end   = start + PER_PAGE;
+
+  // Réinsérer dans le bon ordre + afficher page courante
+  const tbody = document.getElementById('p-tbody');
+  visible.forEach((r, i) => {
+    tbody.appendChild(r);
+    r.style.display = (i >= start && i < end) ? '' : 'none';
+  });
+
+  // Messages
+  const emptyRow = document.getElementById('empty-row');
+  const noResult = document.getElementById('no-result-msg');
+  const hasData  = rows.length > 0;
+  if (emptyRow) emptyRow.style.display = 'none';
+  if (noResult) noResult.classList.toggle('hidden', visible.length > 0 || !hasData);
+  if (!hasData && emptyRow) emptyRow.style.display = '';
+
+  // Info
+  const info = document.getElementById('p-pagination-info');
+  if (info) {
+    const from = visible.length === 0 ? 0 : start + 1;
+    const to   = Math.min(end, visible.length);
+    info.textContent = visible.length === 0
+      ? 'Aucun résultat'
+      : `${from}–${to} sur ${visible.length} participant${visible.length > 1 ? 's' : ''}`;
+  }
+
+  renderPagination(totalPages);
+}
+
+function renderPagination(totalPages) {
+  const container = document.getElementById('p-pagination-btns');
+  if (!container) return;
+  container.innerHTML = '';
+  if (totalPages <= 1) return;
+
+  const prev = document.createElement('button');
+  prev.textContent = '←';
+  prev.className   = 'px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100';
+  if (currentPage === 1) prev.style.opacity = '0.4';
+  prev.disabled = currentPage === 1;
+  prev.onclick  = () => { currentPage--; applyFilters(); };
+  container.appendChild(prev);
+
+  for (let i = 1; i <= totalPages; i++) {
+    const btn = document.createElement('button');
+    btn.textContent = i;
+    btn.className   = 'px-3 py-1.5 text-xs rounded-lg border font-semibold transition-all';
+    if (i === currentPage) {
+      btn.style.background  = '#1a6b3a';
+      btn.style.color       = '#fff';
+      btn.style.borderColor = '#1a6b3a';
+    } else {
+      btn.style.borderColor = '#e5e7eb';
+      btn.style.color       = '#6b7280';
+      btn.onmouseover = () => btn.style.background = '#f3f4f6';
+      btn.onmouseout  = () => btn.style.background = '';
+    }
+    btn.onclick = () => { currentPage = i; applyFilters(); };
+    container.appendChild(btn);
+  }
+
+  const next = document.createElement('button');
+  next.textContent = '→';
+  next.className   = 'px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100';
+  if (currentPage === totalPages) next.style.opacity = '0.4';
+  next.disabled = currentPage === totalPages;
+  next.onclick  = () => { currentPage++; applyFilters(); };
+  container.appendChild(next);
+}
+
+function resetFilters() {
+  document.getElementById('p-search').value  = '';
+  document.getElementById('p-sort').value    = 'name';
+  activeNewsletter = 'all'; activeMode = 'all'; currentPage = 1;
+  document.querySelectorAll('.p-filter-btn').forEach(b => { b.style.background='#f3f4f6'; b.style.color='#4b5563'; });
+  document.querySelectorAll('.m-filter-btn').forEach(b => { b.style.background='#f3f4f6'; b.style.color='#4b5563'; });
+  const fn = document.getElementById('fn-all');
+  const fm = document.getElementById('fm-all');
+  if (fn) { fn.style.background='#1a6b3a'; fn.style.color='#fff'; }
+  if (fm) { fm.style.background='#1f2937'; fm.style.color='#fff'; }
+  applyFilters();
+}
+
+document.addEventListener('DOMContentLoaded', applyFilters);
+</script>
+{% endblock %}

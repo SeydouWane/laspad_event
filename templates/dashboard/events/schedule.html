@@ -1,0 +1,433 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Chronogramme — {{ event.title }}{% endblock %}
+{% block page_title %}Chronogramme{% endblock %}
+{% block page_subtitle %}{{ event.title|truncatechars:60 }}{% endblock %}
+
+{% block header_actions %}
+  <a href="{% url 'dashboard:event_detail' pk=event.pk %}"
+     class="btn-sm bg-gray-100 text-gray-700 hover:bg-gray-200">
+    ← Inscriptions
+  </a>
+  <a href="{{ event.get_absolute_url }}" target="_blank"
+     class="btn-sm bg-blue-50 text-blue-700 hover:bg-blue-100">
+    Voir page publique ↗
+  </a>
+{% endblock %}
+
+{% block content %}
+
+<!-- Info événement -->
+<div class="bg-white rounded-2xl border border-gray-200 p-5 mb-6 flex items-center gap-4">
+  <div class="flex-1 min-w-0">
+    <div class="flex items-center gap-2 flex-wrap">
+      <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+        {{ event.get_event_type_display }}
+      </span>
+      {% if event.is_multiday %}
+        <span class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold">
+          📅 Multi-jours
+        </span>
+      {% endif %}
+    </div>
+    <p class="font-bold text-gray-900 mt-1">{{ event.title }}</p>
+    <p class="text-sm text-gray-500 mt-0.5">
+      {{ event.start_datetime|date:"d F Y" }}
+      {% if event.is_multiday %} → {{ event.end_datetime|date:"d F Y" }}{% endif %}
+    </p>
+  </div>
+  <div class="text-right flex-shrink-0">
+    <p class="text-2xl font-bold text-gray-900">{{ days.count }}</p>
+    <p class="text-xs text-gray-500">jour{{ days.count|pluralize }}</p>
+  </div>
+</div>
+
+{% if not days %}
+<!-- État vide -->
+<div class="bg-white rounded-2xl border border-gray-200 p-12 text-center mb-6">
+  <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+       style="background:#f0fdf4;">
+    <svg class="w-8 h-8" style="color:#1a6b3a;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+    </svg>
+  </div>
+  <h3 class="font-bold text-gray-900 text-lg mb-2">Aucun jour configuré</h3>
+  <p class="text-gray-500 text-sm mb-6">
+    Ajoutez des jours pour construire le chronogramme de votre événement.
+  </p>
+</div>
+{% endif %}
+
+<!-- ══ Jours existants ══ -->
+{% for day in days %}
+<div class="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-5" id="day-{{ day.pk }}">
+
+  <!-- Header du jour -->
+  <div class="px-6 py-4 flex items-center justify-between gap-4"
+       style="background:linear-gradient(135deg,#0f1f15,#1a6b3a);">
+    <div class="flex items-center gap-3 min-w-0">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-white font-bold"
+           style="background:rgba(255,255,255,.15);">
+        J{{ forloop.counter }}
+      </div>
+      <div class="min-w-0">
+        <p class="font-bold text-white text-base">
+          {{ day.date|date:"l d F Y" }}
+        </p>
+        {% if day.title %}
+          <p class="text-sm" style="color:rgba(255,255,255,.7);">{{ day.title }}</p>
+        {% endif %}
+      </div>
+    </div>
+    <div class="flex items-center gap-2 flex-shrink-0">
+      <span class="text-xs font-semibold px-2.5 py-1 rounded-full"
+            style="background:rgba(255,255,255,.15);color:rgba(255,255,255,.9);">
+        {{ day.sessions.count }} session{{ day.sessions.count|pluralize }}
+      </span>
+      <!-- Modifier jour -->
+      <button onclick="toggleDayEdit({{ day.pk }})"
+              class="btn-sm text-xs bg-white/10 text-white hover:bg-white/20">
+        ✏️ Modifier
+      </button>
+      <!-- Supprimer jour -->
+      <form method="post" class="inline"
+            onsubmit="return confirm('Supprimer ce jour et toutes ses sessions ?')">
+        {% csrf_token %}
+        <input type="hidden" name="action"  value="delete_day">
+        <input type="hidden" name="day_pk"  value="{{ day.pk }}">
+        <button type="submit" class="btn-sm text-xs bg-red-500/20 text-red-200 hover:bg-red-500/40">
+          🗑️
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Formulaire édition jour (caché par défaut) -->
+  <div id="day-edit-{{ day.pk }}" class="hidden border-b border-gray-100">
+    <form method="post" class="p-5 grid grid-cols-1 sm:grid-cols-4 gap-4">
+      {% csrf_token %}
+      <input type="hidden" name="action"  value="edit_day">
+      <input type="hidden" name="day_pk"  value="{{ day.pk }}">
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 mb-1">Date</label>
+        <input type="date" name="date" value="{{ day.date|date:'Y-m-d' }}" class="form-input text-sm">
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block text-xs font-semibold text-gray-600 mb-1">Titre du jour</label>
+        <input type="text" name="title" value="{{ day.title }}" class="form-input text-sm"
+               placeholder="Ex: Jour 1 — Ouverture">
+      </div>
+      <div class="flex items-end">
+        <button type="submit" class="btn-sm text-xs bg-green-600 text-white hover:bg-green-700 w-full justify-center">
+          ✓ Sauvegarder
+        </button>
+      </div>
+      <div class="sm:col-span-4">
+        <label class="block text-xs font-semibold text-gray-600 mb-1">Description</label>
+        <textarea name="description" rows="2" class="form-textarea text-sm"
+                  placeholder="Description de la journée...">{{ day.description }}</textarea>
+      </div>
+      <input type="hidden" name="order" value="{{ day.order }}">
+    </form>
+  </div>
+
+  <!-- Sessions -->
+  <div class="divide-y divide-gray-50">
+    {% for session in day.sessions.all %}
+    <div class="px-6 py-4 flex items-start gap-4 hover:bg-gray-50 transition-colors group">
+
+      <!-- Heure -->
+      <div class="flex-shrink-0 text-center w-16">
+        <p class="text-sm font-bold" style="color:#1a6b3a;">{{ session.start_time|time:"H:i" }}</p>
+        <p class="text-xs text-gray-400">{{ session.end_time|time:"H:i" }}</p>
+      </div>
+
+      <!-- Séparateur vertical -->
+      <div class="flex-shrink-0 flex flex-col items-center" style="padding-top:4px;">
+        <div class="w-2 h-2 rounded-full flex-shrink-0" style="background:#1a6b3a;"></div>
+        <div class="w-0.5 flex-1 mt-1" style="background:#e5e7eb;min-height:24px;"></div>
+      </div>
+
+      <!-- Contenu -->
+      <div class="flex-1 min-w-0">
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0">
+            <p class="font-semibold text-gray-900 text-sm">{{ session.title }}</p>
+            {% if session.description %}
+              <p class="text-xs text-gray-500 mt-0.5 leading-relaxed">{{ session.description }}</p>
+            {% endif %}
+            <div class="flex flex-wrap items-center gap-2 mt-1.5">
+              {% if session.speaker %}
+                <span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">
+                  👤 {{ session.speaker.user.get_full_name }}
+                </span>
+              {% endif %}
+              {% if session.location_note %}
+                <span class="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                  📍 {{ session.location_note }}
+                </span>
+              {% endif %}
+              {% if session.mode == 'onsite' %}
+                <span class="text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-600">🏛️ Présentiel</span>
+              {% elif session.mode == 'online' %}
+                <span class="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">🌐 En ligne</span>
+              {% else %}
+                <span class="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">🔀 Les deux</span>
+              {% endif %}
+            </div>
+          </div>
+          <!-- Actions session -->
+          <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+            <button onclick="toggleSessionEdit({{ session.pk }})"
+                    class="btn-sm text-xs bg-gray-100 text-gray-600 hover:bg-blue-50 hover:text-blue-600">
+              ✏️
+            </button>
+            <form method="post" class="inline"
+                  onsubmit="return confirm('Supprimer cette session ?')">
+              {% csrf_token %}
+              <input type="hidden" name="action"     value="delete_session">
+              <input type="hidden" name="session_pk" value="{{ session.pk }}">
+              <button type="submit"
+                      class="btn-sm text-xs bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-500">
+                🗑️
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Formulaire édition session (caché) -->
+        <div id="session-edit-{{ session.pk }}" class="hidden mt-3">
+          <form method="post" class="bg-gray-50 rounded-xl p-4 border border-gray-200 space-y-3">
+            {% csrf_token %}
+            <input type="hidden" name="action"     value="edit_session">
+            <input type="hidden" name="session_pk" value="{{ session.pk }}">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Début</label>
+                <input type="time" name="start_time" value="{{ session.start_time|time:'H:i' }}" class="form-input text-sm">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Fin</label>
+                <input type="time" name="end_time" value="{{ session.end_time|time:'H:i' }}" class="form-input text-sm">
+              </div>
+              <div class="sm:col-span-2">
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Titre</label>
+                <input type="text" name="title" value="{{ session.title }}" class="form-input text-sm">
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Intervenant</label>
+                <select name="speaker" class="form-select text-sm">
+                  <option value="">— Aucun —</option>
+                  {% for sp in speakers %}
+                    <option value="{{ sp.pk }}" {% if session.speaker.pk == sp.pk %}selected{% endif %}>
+                      {{ sp.user.get_full_name }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Salle / Lieu</label>
+                <input type="text" name="location_note" value="{{ session.location_note }}"
+                       class="form-input text-sm" placeholder="Salle A...">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Mode</label>
+                <select name="mode" class="form-select text-sm">
+                  <option value="both"   {% if session.mode == 'both'   %}selected{% endif %}>Les deux</option>
+                  <option value="onsite" {% if session.mode == 'onsite' %}selected{% endif %}>Présentiel</option>
+                  <option value="online" {% if session.mode == 'online' %}selected{% endif %}>En ligne</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Description</label>
+              <textarea name="description" rows="2" class="form-textarea text-sm">{{ session.description }}</textarea>
+            </div>
+            <input type="hidden" name="order" value="{{ session.order }}">
+            <div class="flex gap-2">
+              <button type="submit" class="btn-sm text-xs bg-green-600 text-white hover:bg-green-700">
+                ✓ Sauvegarder
+              </button>
+              <button type="button" onclick="toggleSessionEdit({{ session.pk }})"
+                      class="btn-sm text-xs bg-gray-100 text-gray-600">
+                Annuler
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div class="px-6 py-6 text-center">
+      <p class="text-sm text-gray-400">Aucune session — ajoutez-en une ci-dessous.</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Ajouter une session -->
+  <div class="border-t border-gray-100">
+    <button onclick="toggleAddSession({{ day.pk }})"
+            class="w-full flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold transition-colors hover:bg-green-50"
+            style="color:#1a6b3a;" id="btn-add-session-{{ day.pk }}">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      Ajouter une session
+    </button>
+
+    <!-- Formulaire ajout session -->
+    <div id="add-session-{{ day.pk }}" class="hidden border-t border-gray-100">
+      <form method="post" class="p-5 space-y-4 bg-green-50">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_session">
+        <input type="hidden" name="day_pk" value="{{ day.pk }}">
+
+        <p class="text-sm font-bold text-gray-700">
+          Nouvelle session — {{ day.date|date:"d/m/Y" }}
+        </p>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Début <span class="text-red-500">*</span></label>
+            <input type="time" name="start_time" class="form-input text-sm" required>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Fin <span class="text-red-500">*</span></label>
+            <input type="time" name="end_time" class="form-input text-sm" required>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Titre <span class="text-red-500">*</span></label>
+            <input type="text" name="title" class="form-input text-sm"
+                   placeholder="Ex: Conférence inaugurale" required>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Intervenant</label>
+            <select name="speaker" class="form-select text-sm">
+              <option value="">— Aucun —</option>
+              {% for sp in speakers %}
+                <option value="{{ sp.pk }}">{{ sp.user.get_full_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Salle / Lieu</label>
+            <input type="text" name="location_note" class="form-input text-sm"
+                   placeholder="Salle A, Amphithéâtre...">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Mode</label>
+            <select name="mode" class="form-select text-sm">
+              <option value="both">Les deux</option>
+              <option value="onsite">Présentiel uniquement</option>
+              <option value="online">En ligne uniquement</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Description</label>
+          <textarea name="description" rows="2" class="form-textarea text-sm"
+                    placeholder="Résumé de la session..."></textarea>
+        </div>
+
+        <input type="hidden" name="order" value="{{ day.sessions.count|add:1 }}">
+
+        <div class="flex gap-2">
+          <button type="submit" class="btn-sm text-sm bg-green-600 text-white hover:bg-green-700">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Ajouter la session
+          </button>
+          <button type="button" onclick="toggleAddSession({{ day.pk }})"
+                  class="btn-sm text-sm bg-white text-gray-600 hover:bg-gray-50 border border-gray-200">
+            Annuler
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+<!-- ══ Ajouter un jour ══ -->
+<div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+  <div class="px-6 py-4 border-b border-gray-100 flex items-center gap-3" style="background:#f8faf9;">
+    <div class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold"
+         style="background:#1a6b3a;">+</div>
+    <h2 class="font-semibold text-gray-900">Ajouter un jour</h2>
+  </div>
+  <form method="post" class="p-6 space-y-4">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add_day">
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+          Date <span class="text-red-500">*</span>
+        </label>
+        <input type="date" name="date" class="form-input"
+               min="{{ event.start_datetime|date:'Y-m-d' }}"
+               max="{{ event.end_datetime|date:'Y-m-d' }}"
+               value="{{ event.start_datetime|date:'Y-m-d' }}"
+               required>
+        <p class="text-xs text-gray-400 mt-1">
+          Entre {{ event.start_datetime|date:"d/m/Y" }} et {{ event.end_datetime|date:"d/m/Y" }}
+        </p>
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block text-sm font-semibold text-gray-700 mb-1.5">Titre du jour</label>
+        <input type="text" name="title" class="form-input"
+               placeholder="Ex: Jour 1 — Cérémonie d'ouverture">
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-semibold text-gray-700 mb-1.5">Description</label>
+      <textarea name="description" rows="2" class="form-textarea"
+                placeholder="Description de cette journée..."></textarea>
+    </div>
+
+    <input type="hidden" name="order" value="{{ days.count|add:1 }}">
+
+    <button type="submit"
+            class="btn-sm px-6 py-2.5 font-semibold text-sm"
+            style="background:#1a6b3a;color:#fff;">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      Ajouter ce jour
+    </button>
+  </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleDayEdit(pk) {
+  const el = document.getElementById(`day-edit-${pk}`);
+  el.classList.toggle('hidden');
+}
+
+function toggleAddSession(dayPk) {
+  const form = document.getElementById(`add-session-${dayPk}`);
+  form.classList.toggle('hidden');
+  if (!form.classList.contains('hidden')) {
+    form.querySelector('input[name=start_time]')?.focus();
+  }
+}
+
+function toggleSessionEdit(sessionPk) {
+  const el = document.getElementById(`session-edit-${sessionPk}`);
+  el.classList.toggle('hidden');
+}
+</script>
+{% endblock %}

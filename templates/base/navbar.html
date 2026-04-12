@@ -1,0 +1,63 @@
+{% load static %}
+<nav style="background:#fff;border-bottom:1.5px solid #e5e7eb;" class="sticky top-0 z-50 shadow-sm">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+
+      <!-- Logo LASPAD -->
+      <a href="{% url 'events:list' %}" class="flex items-center gap-3 group">
+        <div class="relative">
+          <img src="{% static 'img/logo.png' %}" alt="LASPAD" class="h-11 w-auto object-contain"
+               onerror="this.style.display='none';document.getElementById('logo-fallback').style.display='flex'">
+          <div id="logo-fallback" class="hidden w-11 h-11 rounded-full items-center justify-center text-white font-bold text-sm" style="background:var(--lp-green)">L</div>
+        </div>
+        <div class="leading-tight">
+          <div style="font-family:'Sora',sans-serif;font-weight:700;font-size:1.05rem;color:var(--lp-dark);line-height:1.1;">LASPAD</div>
+          <div style="font-size:0.72rem;font-weight:500;letter-spacing:.06em;color:var(--lp-green);text-transform:uppercase;">Event</div>
+        </div>
+      </a>
+
+      <!-- Nav desktop -->
+      <div class="hidden md:flex items-center gap-6">
+        <a href="{% url 'events:list' %}" class="text-sm font-medium text-gray-600 hover:text-green-700 transition-colors">
+          Événements
+        </a>
+        {% if user.is_authenticated and user.is_staff %}
+          <a href="{% url 'dashboard:home' %}" class="text-sm font-medium text-gray-600 hover:text-green-700 transition-colors">
+            Dashboard
+          </a>
+          <a href="{% url 'dashboard:event_create' %}" class="btn-primary text-sm py-1.5">
+            + Créer
+          </a>
+          <a href="{% url 'dashboard:logout' %}" class="text-sm text-gray-400 hover:text-red-600 transition-colors">
+            Déconnexion
+          </a>
+        {% else %}
+          <a href="{% url 'dashboard:login' %}" class="text-sm font-medium text-gray-500 hover:text-green-700 transition-colors">
+            Administration
+          </a>
+        {% endif %}
+      </div>
+
+      <!-- Mobile toggle -->
+      <button class="md:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-100" id="mobile-menu-btn">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Mobile menu -->
+    <div class="md:hidden hidden pb-3 space-y-1 border-t border-gray-100 pt-2" id="mobile-menu">
+      <a href="{% url 'events:list' %}" class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-green-50 text-sm font-medium">Événements</a>
+      {% if user.is_authenticated and user.is_staff %}
+        <a href="{% url 'dashboard:home' %}" class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-green-50 text-sm">Dashboard</a>
+        <a href="{% url 'dashboard:logout' %}" class="block px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 text-sm">Déconnexion</a>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+<script>
+  document.getElementById('mobile-menu-btn').addEventListener('click',()=>{
+    document.getElementById('mobile-menu').classList.toggle('hidden');
+  });
+</script>

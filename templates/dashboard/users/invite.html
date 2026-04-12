@@ -1,0 +1,217 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block title %}Inviter un utilisateur{% endblock %}
+{% block page_title %}Inviter un utilisateur{% endblock %}
+{% block page_subtitle %}Créez un nouveau compte administrateur ou gestionnaire{% endblock %}
+
+{% block header_actions %}
+  <a href="{% url 'dashboard:user_list' %}" class="btn-sm bg-gray-100 text-gray-700 hover:bg-gray-200">
+    ← Retour aux utilisateurs
+  </a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+<form method="post" novalidate class="space-y-5">
+  {% csrf_token %}
+
+  <!-- Rôle -->
+  <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center gap-3" style="background:#f8faf9;">
+      <div class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold" style="background:#1a6b3a;">1</div>
+      <h2 class="font-semibold text-gray-900" style="font-family:'Sora',sans-serif;">Rôle et permissions</h2>
+    </div>
+    <div class="p-6">
+      <div class="grid grid-cols-2 gap-4">
+
+        <label class="role-card flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all"
+               style="border-color:#c9a227;background:#fef9e7;" id="card-admin">
+          <input type="radio" name="role" value="admin" class="hidden"
+                 {% if post.role == 'admin' or not post %}checked{% endif %}
+                 onchange="selectRole('admin')">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style="background:#c9a227;">
+            <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="font-bold text-sm" style="color:#92400e;">Administrateur</p>
+            <ul class="text-xs text-yellow-700 mt-1.5 space-y-0.5">
+              <li>✓ Accès complet</li>
+              <li>✓ Gestion des utilisateurs</li>
+              <li>✓ Création d'événements</li>
+              <li>✓ Toutes les statistiques</li>
+            </ul>
+          </div>
+        </label>
+
+        <label class="role-card flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all border-gray-200 bg-white" id="card-manager">
+          <input type="radio" name="role" value="manager" class="hidden"
+                 onchange="selectRole('manager')">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 bg-blue-100">
+            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+            </svg>
+          </div>
+          <div>
+            <p class="font-bold text-sm text-blue-800">Gestionnaire</p>
+            <ul class="text-xs text-blue-600 mt-1.5 space-y-0.5">
+              <li>✓ Gestion des événements</li>
+              <li>✓ Validation inscriptions</li>
+              <li>✓ Export CSV</li>
+              <li>✗ Gestion utilisateurs</li>
+            </ul>
+          </div>
+        </label>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Infos personnelles -->
+  <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center gap-3" style="background:#f8faf9;">
+      <div class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold" style="background:#1a6b3a;">2</div>
+      <h2 class="font-semibold text-gray-900" style="font-family:'Sora',sans-serif;">Informations personnelles</h2>
+    </div>
+    <div class="p-6 space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Prénom <span class="text-red-500">*</span></label>
+          <input type="text" name="first_name" required class="form-input"
+                 value="{{ post.first_name|default:'' }}" placeholder="Prénom">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Nom <span class="text-red-500">*</span></label>
+          <input type="text" name="last_name" required class="form-input"
+                 value="{{ post.last_name|default:'' }}" placeholder="Nom">
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1.5">Email <span class="text-red-500">*</span></label>
+        <input type="email" name="email" required class="form-input"
+               value="{{ post.email|default:'' }}" placeholder="email@example.com">
+      </div>
+    </div>
+  </div>
+
+  <!-- Identifiants de connexion -->
+  <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center gap-3" style="background:#f8faf9;">
+      <div class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold" style="background:#1a6b3a;">3</div>
+      <h2 class="font-semibold text-gray-900" style="font-family:'Sora',sans-serif;">Identifiants de connexion</h2>
+    </div>
+    <div class="p-6 space-y-4">
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1.5">Nom d'utilisateur <span class="text-red-500">*</span></label>
+        <input type="text" name="username" required class="form-input"
+               value="{{ post.username|default:'' }}" placeholder="nom.utilisateur"
+               autocomplete="off">
+        <p class="text-xs text-gray-400 mt-1">Utilisé pour la connexion — pas d'espace, pas d'accent.</p>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Mot de passe <span class="text-red-500">*</span></label>
+          <div class="relative">
+            <input type="password" name="password" required id="pwd1" class="form-input"
+                   placeholder="8 caractères min." autocomplete="new-password">
+            <button type="button" onclick="togglePwd('pwd1','eye1')"
+                    class="absolute inset-y-0 right-0 pr-3 flex items-center" tabindex="-1">
+              <svg id="eye1" class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Confirmer <span class="text-red-500">*</span></label>
+          <div class="relative">
+            <input type="password" name="password2" required id="pwd2" class="form-input"
+                   placeholder="Répéter le mot de passe" autocomplete="new-password">
+            <button type="button" onclick="togglePwd('pwd2','eye2')"
+                    class="absolute inset-y-0 right-0 pr-3 flex items-center" tabindex="-1">
+              <svg id="eye2" class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- Indicateur de force -->
+      <div id="pwd-strength-bar" class="hidden">
+        <div class="flex gap-1 mt-1">
+          <div id="s1" class="h-1 flex-1 rounded-full bg-gray-200 transition-colors"></div>
+          <div id="s2" class="h-1 flex-1 rounded-full bg-gray-200 transition-colors"></div>
+          <div id="s3" class="h-1 flex-1 rounded-full bg-gray-200 transition-colors"></div>
+          <div id="s4" class="h-1 flex-1 rounded-full bg-gray-200 transition-colors"></div>
+        </div>
+        <p id="pwd-strength-label" class="text-xs text-gray-400 mt-1"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="flex items-center justify-between gap-4 pb-4">
+    <a href="{% url 'dashboard:user_list' %}" class="text-sm text-gray-500 hover:text-gray-700 transition-colors">← Annuler</a>
+    <button type="submit"
+            class="py-3 px-8 rounded-xl text-white font-bold text-sm transition-all hover:shadow-lg hover:-translate-y-0.5"
+            style="background:linear-gradient(135deg,#1a6b3a,#2d8a52);font-family:'Sora',sans-serif;">
+      <span class="flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+        </svg>
+        Créer le compte
+      </span>
+    </button>
+  </div>
+
+</form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function selectRole(val) {
+  const cardAdmin   = document.getElementById('card-admin');
+  const cardManager = document.getElementById('card-manager');
+  if (val === 'admin') {
+    cardAdmin.style.borderColor = '#c9a227'; cardAdmin.style.background = '#fef9e7';
+    cardManager.style.borderColor = '#e5e7eb'; cardManager.style.background = '#fff';
+  } else {
+    cardManager.style.borderColor = '#3b82f6'; cardManager.style.background = '#eff6ff';
+    cardAdmin.style.borderColor = '#e5e7eb'; cardAdmin.style.background = '#fff';
+  }
+}
+
+function togglePwd(inputId, iconId) {
+  const input = document.getElementById(inputId);
+  input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+// Force du mot de passe
+document.getElementById('pwd1')?.addEventListener('input', function() {
+  const pw = this.value;
+  const bar = document.getElementById('pwd-strength-bar');
+  if (!pw) { bar.classList.add('hidden'); return; }
+  bar.classList.remove('hidden');
+
+  let score = 0;
+  if (pw.length >= 8)  score++;
+  if (pw.length >= 12) score++;
+  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  score = Math.min(score, 4);
+
+  const colors = ['#ef4444','#f59e0b','#3b82f6','#10b981'];
+  const labels = ['Très faible','Faible','Moyen','Fort'];
+  for (let i=1; i<=4; i++) {
+    document.getElementById(`s${i}`).style.background = i <= score ? colors[score-1] : '#e5e7eb';
+  }
+  document.getElementById('pwd-strength-label').textContent = labels[score-1] || '';
+  document.getElementById('pwd-strength-label').style.color = colors[score-1] || '#9ca3af';
+});
+</script>
+{% endblock %}

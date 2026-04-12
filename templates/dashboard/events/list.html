@@ -1,0 +1,365 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block title %}Événements{% endblock %}
+{% block page_title %}Événements{% endblock %}
+{% block page_subtitle %}{{ events.count }} événement{{ events.count|pluralize }} au total{% endblock %}
+
+{% block header_actions %}
+  <a href="{% url 'dashboard:event_create' %}" class="btn-sm btn-primary-sm">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+    </svg>
+    Nouvel événement
+  </a>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Filtres + Recherche ── -->
+<div class="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-4">
+  <div class="px-6 py-4 flex flex-wrap items-center gap-3">
+
+    <!-- Recherche -->
+    <div class="flex-1 min-w-48">
+      <div class="relative">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <input type="text" id="ev-search" placeholder="Rechercher un événement..."
+               class="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-green-400"
+               oninput="applyFilters()">
+      </div>
+    </div>
+
+    <!-- Filtre statut -->
+    <div class="flex gap-1 flex-wrap">
+      <button onclick="setFilter('status','all')" id="fs-all"
+              class="ev-status-btn text-xs px-3 py-1.5 rounded-lg font-semibold transition-all"
+              style="background:#1a6b3a;color:#fff;">Tous</button>
+      <button onclick="setFilter('status','publie')" id="fs-publie"
+              class="ev-status-btn text-xs px-3 py-1.5 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition-all">
+        Publié</button>
+      <button onclick="setFilter('status','brouillon')" id="fs-brouillon"
+              class="ev-status-btn text-xs px-3 py-1.5 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all">
+        Brouillon</button>
+      <button onclick="setFilter('status','upcoming')" id="fs-upcoming"
+              class="ev-status-btn text-xs px-3 py-1.5 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-green-50 hover:text-green-700 transition-all">
+        À venir</button>
+      <button onclick="setFilter('status','past')" id="fs-past"
+              class="ev-status-btn text-xs px-3 py-1.5 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all">
+        Passé</button>
+    </div>
+
+    <!-- Filtre mode -->
+    <div class="flex gap-1">
+      <button onclick="setFilter('mode','all')" id="fm-all"
+              class="ev-mode-btn text-xs px-3 py-1.5 rounded-lg font-semibold transition-all"
+              style="background:#1f2937;color:#fff;">Tous modes</button>
+      <button onclick="setFilter('mode','online_only')" id="fm-online_only"
+              class="ev-mode-btn text-xs px-3 py-1.5 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition-all">
+        🌐 En ligne</button>
+      <button onclick="setFilter('mode','onsite_only')" id="fm-onsite_only"
+              class="ev-mode-btn text-xs px-3 py-1.5 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-purple-50 hover:text-purple-700 transition-all">
+        🏛️ Présentiel</button>
+      <button onclick="setFilter('mode','hybrid')" id="fm-hybrid"
+              class="ev-mode-btn text-xs px-3 py-1.5 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-amber-50 hover:text-amber-700 transition-all">
+        🔀 Hybride</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Table ── -->
+<div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="table w-full" id="ev-table">
+      <thead>
+        <tr>
+          <th class="text-left">Titre</th>
+          <th class="text-left">Type / Mode</th>
+          <th class="text-left">Date</th>
+          <th class="text-left">Statut</th>
+          <th class="text-left">Inscriptions</th>
+          <th class="text-left">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="ev-tbody">
+        {% for event in events %}
+        <tr class="ev-row"
+            data-status="{{ event.status }}"
+            data-upcoming="{% if event.is_upcoming %}1{% else %}0{% endif %}"
+            data-past="{% if event.is_finished %}1{% else %}0{% endif %}"
+            data-mode="{{ event.participation_mode|default:'online_only' }}"
+            data-search="{{ event.title|lower }} {{ event.get_event_type_display|lower }}">
+
+          <td>
+            <a href="{% url 'dashboard:event_detail' pk=event.pk %}"
+               class="font-semibold text-gray-900 hover:text-green-700 transition-colors">
+              {{ event.title|truncatechars:45 }}
+            </a>
+            <div class="flex flex-wrap gap-1 mt-1">
+              {% if event.access_mode == 'validation' %}
+                <span class="text-xs text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded">validation</span>
+              {% endif %}
+              {% if event.participation_mode == 'hybrid' %}
+                <span class="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-semibold">🔀 Hybride</span>
+              {% elif event.participation_mode == 'onsite_only' %}
+                <span class="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-semibold">🏛️ Présentiel</span>
+              {% else %}
+                <span class="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-semibold">🌐 En ligne</span>
+              {% endif %}
+            </div>
+          </td>
+
+          <td>
+            <span class="text-sm text-gray-600">{{ event.get_event_type_display }}</span>
+          </td>
+
+          <td class="text-sm text-gray-600 whitespace-nowrap">
+            {{ event.start_datetime|date:"d/m/Y" }}
+            <p class="text-xs text-gray-400">{{ event.start_datetime|date:"H:i" }}</p>
+          </td>
+
+          <td>
+            {% if event.status == 'publie' %}<span class="badge-published">Publié</span>
+            {% elif event.status == 'brouillon' %}<span class="badge-draft">Brouillon</span>
+            {% elif event.status == 'annule' %}<span class="badge-refused">Annulé</span>
+            {% else %}<span class="badge-draft">Terminé</span>{% endif %}
+            {% if event.is_upcoming %}
+              <p class="text-xs text-green-600 font-semibold mt-0.5">À venir</p>
+            {% elif event.is_finished %}
+              <p class="text-xs text-gray-400 mt-0.5">Terminé</p>
+            {% endif %}
+          </td>
+
+          <td>
+            <div class="flex items-center gap-2">
+              <span class="font-semibold text-gray-900">{{ event.reg_count }}</span>
+              {% if event.pending_count > 0 %}
+                <span class="badge-pending text-xs">{{ event.pending_count }} att.</span>
+              {% endif %}
+            </div>
+            {% if event.participation_mode == 'hybrid' %}
+              <div class="flex gap-1 mt-1">
+                <span class="text-xs text-purple-600">🏛️ {{ event.accepted_onsite.count }}</span>
+                <span class="text-xs text-gray-300">|</span>
+                <span class="text-xs text-blue-600">🌐 {{ event.accepted_online.count }}</span>
+              </div>
+            {% endif %}
+          </td>
+
+          <td>
+            <div class="flex flex-wrap items-center gap-1.5">
+              <a href="{% url 'dashboard:event_detail' pk=event.pk %}"
+                 class="btn-sm bg-gray-100 text-gray-700 hover:bg-gray-200 text-xs">
+                Gérer
+              </a>
+              <a href="{% url 'dashboard:event_edit' pk=event.pk %}"
+                 class="btn-sm bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs">
+                Modifier
+              </a>
+              <a href="{% url 'dashboard:schedule_manage' pk=event.pk %}"
+                 class="btn-sm bg-green-50 text-green-700 hover:bg-green-100 text-xs">
+                📅
+              </a>
+              <a href="{% url 'dashboard:contact_participants' pk=event.pk %}"
+                 class="btn-sm bg-purple-50 text-purple-700 hover:bg-purple-100 text-xs">
+                ✉
+              </a>
+              <a href="{% url 'dashboard:export_csv' pk=event.pk %}"
+                 class="btn-sm bg-gray-50 text-gray-600 hover:bg-gray-100 text-xs">
+                CSV
+              </a>
+              {% if event.participation_mode == 'onsite_only' or event.participation_mode == 'hybrid' %}
+              <a href="{% url 'dashboard:scan_home' %}"
+                 class="btn-sm text-xs font-semibold"
+                 style="background:#0f1f15;color:#fff;"
+                 title="Scanner les tickets de cet événement">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8H3m2 0h-.01M9 4H7"/>
+                </svg>
+                Scanner
+              </a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr id="empty-row">
+          <td colspan="6" class="text-center py-16 text-gray-400">
+            <svg class="w-12 h-12 mx-auto mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <p class="font-medium">Aucun événement créé.</p>
+            <a href="{% url 'dashboard:event_create' %}" class="text-green-700 hover:underline text-sm mt-1 inline-block">
+              Créer le premier événement →
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Message aucun résultat -->
+  <div id="no-result-msg" class="hidden text-center py-12 text-gray-400 border-t border-gray-100">
+    <svg class="w-10 h-10 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+    </svg>
+    <p class="font-medium">Aucun événement ne correspond à votre recherche.</p>
+    <button onclick="resetFilters()" class="text-green-700 hover:underline text-sm mt-1">Réinitialiser les filtres</button>
+  </div>
+
+  <!-- Pagination -->
+  <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+    <p class="text-xs text-gray-500" id="ev-pagination-info"></p>
+    <div class="flex gap-1" id="ev-pagination-btns"></div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const PER_PAGE   = 10;
+let currentPage  = 1;
+let activeStatus = 'all';
+let activeMode   = 'all';
+
+function setFilter(type, val) {
+  if (type === 'status') activeStatus = val;
+  if (type === 'mode')   activeMode   = val;
+  currentPage = 1;
+
+  // Boutons statut
+  if (type === 'status') {
+    document.querySelectorAll('.ev-status-btn').forEach(btn => {
+      btn.style.background = '#f3f4f6'; btn.style.color = '#4b5563';
+    });
+    const b = document.getElementById(`fs-${val}`);
+    if (b) { b.style.background = '#1a6b3a'; b.style.color = '#fff'; }
+  }
+  // Boutons mode
+  if (type === 'mode') {
+    document.querySelectorAll('.ev-mode-btn').forEach(btn => {
+      btn.style.background = '#f3f4f6'; btn.style.color = '#4b5563';
+    });
+    const b = document.getElementById(`fm-${val}`);
+    if (b) { b.style.background = '#1f2937'; b.style.color = '#fff'; }
+  }
+  applyFilters();
+}
+
+function applyFilters() {
+  const search = document.getElementById('ev-search').value.toLowerCase().trim();
+  const rows   = [...document.querySelectorAll('.ev-row')];
+
+  const visible = rows.filter(row => {
+    // Statut
+    let matchStatus = true;
+    if (activeStatus === 'upcoming') matchStatus = row.dataset.upcoming === '1';
+    else if (activeStatus === 'past') matchStatus = row.dataset.past === '1';
+    else if (activeStatus !== 'all') matchStatus = row.dataset.status === activeStatus;
+
+    // Mode
+    const matchMode = activeMode === 'all' || row.dataset.mode === activeMode;
+
+    // Recherche
+    const matchSearch = !search || row.dataset.search.includes(search);
+
+    return matchStatus && matchMode && matchSearch;
+  });
+
+  // Masquer tout
+  rows.forEach(r => r.style.display = 'none');
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(visible.length / PER_PAGE));
+  if (currentPage > totalPages) currentPage = 1;
+
+  const start = (currentPage - 1) * PER_PAGE;
+  const end   = start + PER_PAGE;
+  visible.forEach((r, i) => {
+    r.style.display = (i >= start && i < end) ? '' : 'none';
+  });
+
+  // Messages
+  const emptyRow  = document.getElementById('empty-row');
+  const noResult  = document.getElementById('no-result-msg');
+  const hasEvents = rows.length > 0;
+
+  if (emptyRow) emptyRow.style.display = 'none';
+  if (noResult) noResult.classList.toggle('hidden', visible.length > 0 || !hasEvents);
+  if (!hasEvents && emptyRow) emptyRow.style.display = '';
+
+  // Info
+  const info = document.getElementById('ev-pagination-info');
+  if (info) {
+    const from = visible.length === 0 ? 0 : start + 1;
+    const to   = Math.min(end, visible.length);
+    info.textContent = visible.length === 0
+      ? 'Aucun résultat'
+      : `${from}–${to} sur ${visible.length} événement${visible.length > 1 ? 's' : ''}`;
+  }
+
+  renderPagination(totalPages, visible.length);
+}
+
+function renderPagination(totalPages, total) {
+  const container = document.getElementById('ev-pagination-btns');
+  if (!container) return;
+  container.innerHTML = '';
+  if (totalPages <= 1) return;
+
+  const prev = document.createElement('button');
+  prev.textContent = '←';
+  prev.className   = 'px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100';
+  if (currentPage === 1) prev.style.opacity = '0.4';
+  prev.disabled = currentPage === 1;
+  prev.onclick  = () => { currentPage--; applyFilters(); };
+  container.appendChild(prev);
+
+  for (let i = 1; i <= totalPages; i++) {
+    const btn = document.createElement('button');
+    btn.textContent = i;
+    btn.className   = 'px-3 py-1.5 text-xs rounded-lg border font-semibold transition-all';
+    if (i === currentPage) {
+      btn.style.background  = '#1a6b3a';
+      btn.style.color       = '#fff';
+      btn.style.borderColor = '#1a6b3a';
+    } else {
+      btn.style.borderColor = '#e5e7eb';
+      btn.style.color       = '#6b7280';
+      btn.onmouseover = () => btn.style.background = '#f3f4f6';
+      btn.onmouseout  = () => btn.style.background = '';
+    }
+    btn.onclick = () => { currentPage = i; applyFilters(); };
+    container.appendChild(btn);
+  }
+
+  const next = document.createElement('button');
+  next.textContent = '→';
+  next.className   = 'px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100';
+  if (currentPage === totalPages) next.style.opacity = '0.4';
+  next.disabled = currentPage === totalPages;
+  next.onclick  = () => { currentPage++; applyFilters(); };
+  container.appendChild(next);
+}
+
+function resetFilters() {
+  document.getElementById('ev-search').value = '';
+  activeStatus = 'all'; activeMode = 'all'; currentPage = 1;
+  document.querySelectorAll('.ev-status-btn').forEach(b => { b.style.background='#f3f4f6'; b.style.color='#4b5563'; });
+  document.querySelectorAll('.ev-mode-btn').forEach(b => { b.style.background='#f3f4f6'; b.style.color='#4b5563'; });
+  const fs = document.getElementById('fs-all');
+  const fm = document.getElementById('fm-all');
+  if (fs) { fs.style.background='#1a6b3a'; fs.style.color='#fff'; }
+  if (fm) { fm.style.background='#1f2937'; fm.style.color='#fff'; }
+  applyFilters();
+}
+
+document.addEventListener('DOMContentLoaded', applyFilters);
+</script>
+{% endblock %}

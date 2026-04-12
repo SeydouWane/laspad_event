@@ -1,0 +1,82 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block title %}Supprimer {{ target.get_full_name }}{% endblock %}
+{% block page_title %}Confirmer la suppression{% endblock %}
+
+{% block content %}
+<div class="max-w-lg">
+  <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+
+    <!-- Header rouge -->
+    <div class="px-6 py-5" style="background:linear-gradient(135deg,#7f1d1d,#dc2626);">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-full flex items-center justify-center" style="background:rgba(255,255,255,.15);">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-white font-bold text-lg" style="font-family:'Sora',sans-serif;">Action irréversible</p>
+          <p class="text-red-200 text-sm mt-0.5">Cette suppression est définitive.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-6">
+      <!-- Info utilisateur -->
+      <div class="flex items-center gap-4 p-4 rounded-xl mb-6" style="background:#f9fafb;border:1px solid #e5e7eb;">
+        <div class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
+             style="background:{% if target.is_superuser %}#c9a227{% else %}#3b82f6{% endif %};">
+          {{ target.first_name|first|upper }}{{ target.last_name|first|upper }}
+        </div>
+        <div>
+          <p class="font-bold text-gray-900">{{ target.get_full_name|default:target.username }}</p>
+          <p class="text-sm text-gray-500">@{{ target.username }} · {{ target.email }}</p>
+          <p class="text-xs mt-1">
+            {% if target.is_superuser %}
+              <span style="color:#c9a227;font-weight:600;">Administrateur</span>
+            {% else %}
+              <span class="text-blue-600 font-semibold">Gestionnaire</span>
+            {% endif %}
+          </p>
+        </div>
+      </div>
+
+      <!-- Avertissement -->
+      <div class="rounded-xl p-4 mb-6" style="background:#fff5f5;border:1px solid #fed7d7;">
+        <p class="text-sm text-red-700 font-semibold mb-2">Ce qui sera supprimé :</p>
+        <ul class="text-sm text-red-600 space-y-1">
+          <li class="flex items-center gap-2">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+            Le compte utilisateur et ses identifiants
+          </li>
+          <li class="flex items-center gap-2">
+            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+            Toutes ses données associées
+          </li>
+        </ul>
+      </div>
+
+      <!-- Boutons -->
+      <div class="flex gap-3">
+        <a href="{% url 'dashboard:user_list' %}"
+           class="flex-1 py-3 rounded-xl border border-gray-200 text-gray-700 font-semibold text-sm text-center hover:bg-gray-50 transition-colors">
+          Annuler
+        </a>
+        <form method="post" class="flex-1">
+          {% csrf_token %}
+          <button type="submit"
+                  class="w-full py-3 rounded-xl text-white font-bold text-sm transition-all hover:shadow-lg"
+                  style="background:linear-gradient(135deg,#dc2626,#b91c1c);">
+            Oui, supprimer définitivement
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,369 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block title %}{{ event.title }}{% endblock %}
+{% block page_title %}{{ event.title|truncatechars:50 }}{% endblock %}
+{% block page_subtitle %}Gestion des inscriptions — {{ registrations.count }} inscription{{ registrations.count|pluralize }}{% endblock %}
+
+{% block header_actions %}
+  <a href="{{ event.get_absolute_url }}" target="_blank" class="btn-sm bg-gray-100 text-gray-700 hover:bg-gray-200">
+    Voir ↗
+  </a>
+  <a href="{% url 'dashboard:event_edit' pk=event.pk %}" class="btn-sm bg-blue-50 text-blue-700 hover:bg-blue-100">
+    Modifier
+  </a>
+  <a href="{% url 'dashboard:schedule_manage' pk=event.pk %}" class="btn-sm bg-green-50 text-green-700 hover:bg-green-100">
+    📅 Chronogramme
+  </a>
+  <a href="{% url 'dashboard:contact_participants' pk=event.pk %}" class="btn-sm bg-purple-50 text-purple-700 hover:bg-purple-100">
+    ✉ Contacter
+  </a>
+  <a href="{% url 'dashboard:export_csv' pk=event.pk %}" class="btn-sm btn-primary-sm">
+    ↓ CSV
+  </a>
+  <a href="{% url 'dashboard:export_presence_csv' pk=event.pk %}" class="btn-sm bg-blue-50 text-blue-700 hover:bg-blue-100">
+    ↓ Présences
+  </a>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Stats ── -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="stat-card text-center">
+    <p class="text-2xl font-bold text-gray-900">{{ accepted.count }}</p>
+    <p class="text-sm text-gray-500 mt-1">Accepté{{ accepted.count|pluralize }}</p>
+  </div>
+  <div class="stat-card text-center">
+    <p class="text-2xl font-bold {% if pending.count > 0 %}text-yellow-600{% else %}text-gray-900{% endif %}">
+      {{ pending.count }}
+    </p>
+    <p class="text-sm text-gray-500 mt-1">En attente</p>
+  </div>
+  <div class="stat-card text-center">
+    <p class="text-2xl font-bold text-red-500">{{ refused.count }}</p>
+    <p class="text-sm text-gray-500 mt-1">Refusé{{ refused.count|pluralize }}</p>
+  </div>
+  <div class="stat-card text-center">
+    {% if participation_mode == 'hybrid' %}
+      <div class="flex justify-around">
+        <div>
+          <p class="text-lg font-bold text-purple-700">{{ accepted_onsite.count }}</p>
+          <p class="text-xs text-gray-400">🏛️ Présentiel</p>
+        </div>
+        <div>
+          <p class="text-lg font-bold text-blue-700">{{ accepted_online.count }}</p>
+          <p class="text-xs text-gray-400">🌐 En ligne</p>
+        </div>
+      </div>
+    {% else %}
+      <p class="text-2xl font-bold text-gray-400">∞</p>
+      <p class="text-sm text-gray-500 mt-1">Illimité</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── Capacités hybrides ── -->
+{% if participation_mode == 'hybrid' %}
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+  <div class="bg-purple-50 border border-purple-200 rounded-xl p-4">
+    <div class="flex items-center justify-between mb-3">
+      <div>
+        <p class="font-bold text-purple-800">🏛️ Présentiel</p>
+        <p class="text-xs text-purple-600 mt-0.5">
+          {{ accepted_onsite.count }}{% if event.max_onsite %}/{{ event.max_onsite }}{% endif %} accepté(s)
+          · {{ pending_onsite.count }} en attente
+        </p>
+      </div>
+      {% if event.max_onsite %}
+        <span class="text-sm font-bold {% if event.is_full_onsite %}text-red-600{% else %}text-purple-700{% endif %}">
+          {% if event.is_full_onsite %}Complet{% else %}{{ event.spots_remaining_onsite }} place{{ event.spots_remaining_onsite|pluralize }}{% endif %}
+        </span>
+      {% endif %}
+    </div>
+    {% if pending_onsite.count > 0 and event.access_onsite == 'validation' %}
+    <div class="flex flex-wrap gap-2">
+      <form method="post" action="{% url 'dashboard:registration_accept_bulk' pk=event.pk %}" class="inline">
+        {% csrf_token %}
+        <input type="hidden" name="mode" value="onsite">
+        <div class="flex items-center gap-1">
+          <input type="number" name="limit" placeholder="N" min="1" max="{{ pending_onsite.count }}"
+                 class="w-16 text-xs border border-purple-300 rounded-lg px-2 py-1.5 text-center">
+          <button type="submit" class="btn-sm text-xs bg-purple-600 text-white hover:bg-purple-700">
+            Accepter N premiers
+          </button>
+        </div>
+      </form>
+      <form method="post" action="{% url 'dashboard:registration_accept_bulk' pk=event.pk %}" class="inline">
+        {% csrf_token %}
+        <input type="hidden" name="mode" value="onsite">
+        <button type="submit" class="btn-sm text-xs bg-purple-100 text-purple-700 hover:bg-purple-200">
+          Accepter tous ({{ pending_onsite.count }})
+        </button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+    <div class="flex items-center justify-between mb-3">
+      <div>
+        <p class="font-bold text-blue-800">🌐 En ligne</p>
+        <p class="text-xs text-blue-600 mt-0.5">
+          {{ accepted_online.count }}{% if event.max_online %}/{{ event.max_online }}{% endif %} accepté(s)
+          · {{ pending_online.count }} en attente
+        </p>
+      </div>
+      {% if event.max_online %}
+        <span class="text-sm font-bold {% if event.is_full_online %}text-red-600{% else %}text-blue-700{% endif %}">
+          {% if event.is_full_online %}Complet{% else %}{{ event.spots_remaining_online }} place{{ event.spots_remaining_online|pluralize }}{% endif %}
+        </span>
+      {% else %}
+        <span class="text-xs text-blue-500">Illimité</span>
+      {% endif %}
+    </div>
+    {% if pending_online.count > 0 and event.access_online == 'validation' %}
+    <div class="flex flex-wrap gap-2">
+      <form method="post" action="{% url 'dashboard:registration_accept_bulk' pk=event.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="mode" value="online">
+        <button type="submit" class="btn-sm text-xs bg-blue-600 text-white hover:bg-blue-700">
+          ✓ Accepter tous en ligne ({{ pending_online.count }})
+        </button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% elif pending.count > 0 %}
+<div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6 flex flex-wrap items-center gap-3">
+  <p class="text-sm font-semibold text-yellow-800 flex-1">
+    {{ pending.count }} inscription{{ pending.count|pluralize }} en attente
+  </p>
+  <form method="post" action="{% url 'dashboard:registration_accept_bulk' pk=event.pk %}" class="inline flex items-center gap-2">
+    {% csrf_token %}
+    <input type="hidden" name="mode" value="all">
+    <input type="number" name="limit" placeholder="Limiter à N" min="1" max="{{ pending.count }}"
+           class="w-28 text-xs border border-yellow-300 rounded-lg px-2 py-1.5 text-center">
+    <button type="submit" class="btn-sm text-xs bg-green-600 text-white hover:bg-green-700">
+      ✓ Accepter
+    </button>
+  </form>
+  <form method="post" action="{% url 'dashboard:registration_refuse_bulk' pk=event.pk %}" class="inline">
+    {% csrf_token %}
+    <button type="submit" class="btn-sm text-xs bg-red-50 text-red-600 hover:bg-red-100"
+            onclick="return confirm('Refuser toutes les inscriptions en attente ?')">
+      ✗ Tout refuser
+    </button>
+  </form>
+</div>
+{% endif %}
+
+<!-- ── Lien public ── -->
+<div class="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 flex items-center justify-between gap-4">
+  <div>
+    <p class="text-sm font-semibold text-green-800">Lien public d'inscription</p>
+    <p class="text-green-700 text-sm font-mono mt-0.5">{{ request.scheme }}://{{ request.get_host }}{{ event.get_registration_url }}</p>
+  </div>
+  <button onclick="navigator.clipboard.writeText('{{ request.scheme }}://{{ request.get_host }}{{ event.get_registration_url }}').then(()=>alert('Lien copié !'))"
+          class="btn-sm bg-green-600 text-white hover:bg-green-700 flex-shrink-0">
+    Copier
+  </button>
+</div>
+
+<!-- ── Table inscriptions ── -->
+<div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+  <div class="px-6 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+    <h2 class="font-semibold text-gray-800">Inscriptions</h2>
+    <div class="flex flex-wrap gap-2">
+      <button onclick="filterTable('all')"        id="filter-all"      class="btn-sm bg-gray-900 text-white text-xs">Tout ({{ registrations.count }})</button>
+      <button onclick="filterTable('en_attente')" id="filter-pending"  class="btn-sm bg-gray-100 text-gray-600 text-xs">⏳ Attente ({{ pending.count }})</button>
+      <button onclick="filterTable('accepte')"    id="filter-accepted" class="btn-sm bg-gray-100 text-gray-600 text-xs">✅ Accepté ({{ accepted.count }})</button>
+      <button onclick="filterTable('refuse')"     id="filter-refused"  class="btn-sm bg-gray-100 text-gray-600 text-xs">✗ Refusé ({{ refused.count }})</button>
+      {% if participation_mode == 'hybrid' %}
+      <button onclick="filterMode('onsite')" id="filter-onsite" class="btn-sm bg-purple-100 text-purple-700 text-xs">🏛️ Présentiel</button>
+      <button onclick="filterMode('online')" id="filter-online" class="btn-sm bg-blue-100 text-blue-700 text-xs">🌐 En ligne</button>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Actions en masse par sélection -->
+  <div id="bulk-actions" class="hidden px-6 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-3">
+    <span class="text-sm text-gray-600"><span id="selected-count">0</span> sélectionné(s)</span>
+    <form method="post" action="{% url 'dashboard:registration_accept_bulk' pk=event.pk %}" id="bulk-accept-form">
+      {% csrf_token %}
+      <div id="bulk-ids-accept"></div>
+      <button type="submit" class="btn-sm text-xs bg-green-600 text-white hover:bg-green-700">✓ Accepter la sélection</button>
+    </form>
+    <form method="post" action="{% url 'dashboard:registration_refuse_bulk' pk=event.pk %}" id="bulk-refuse-form">
+      {% csrf_token %}
+      <div id="bulk-ids-refuse"></div>
+      <button type="submit" class="btn-sm text-xs bg-red-50 text-red-600 hover:bg-red-100">✗ Refuser la sélection</button>
+    </form>
+    <button onclick="clearSelection()" class="text-xs text-gray-400 hover:text-gray-600 underline">Annuler</button>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="table w-full" id="registrations-table">
+      <thead>
+        <tr>
+          <th class="w-8">
+            <input type="checkbox" id="select-all" onchange="toggleAll(this)"
+                   class="rounded" style="accent-color:#1a6b3a;">
+          </th>
+          <th class="text-left">Participant</th>
+          <th class="text-left">Institution</th>
+          {% if participation_mode == 'hybrid' %}
+          <th class="text-left">Mode</th>
+          {% endif %}
+          <th class="text-left">Statut</th>
+          <th class="text-left">Date</th>
+          <th class="text-left">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for reg in registrations %}
+        <tr data-status="{{ reg.status }}"
+            data-mode="{{ reg.participation_type }}"
+            data-reg-id="{{ reg.pk }}">
+          <td>
+            {% if reg.status == 'en_attente' %}
+            <input type="checkbox" class="reg-checkbox rounded" value="{{ reg.pk }}"
+                   onchange="updateSelection()" style="accent-color:#1a6b3a;">
+            {% endif %}
+          </td>
+          <td>
+            <div class="font-semibold text-gray-900">{{ reg.participant.full_name }}</div>
+            <div class="text-xs text-gray-400">{{ reg.participant.email }}</div>
+            {% if reg.participant.phone %}
+              <div class="text-xs text-gray-400">{{ reg.participant.phone }}</div>
+            {% endif %}
+          </td>
+          <td>
+            <div class="text-sm text-gray-700">{{ reg.participant.institution }}</div>
+            <div class="text-xs text-gray-500">{{ reg.participant.role }}</div>
+          </td>
+          {% if participation_mode == 'hybrid' %}
+          <td>
+            {% if reg.participation_type == 'onsite' %}
+              <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">🏛️ Présentiel</span>
+            {% elif reg.participation_type == 'online' %}
+              <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">🌐 En ligne</span>
+            {% else %}
+              <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">🔀 Les deux</span>
+            {% endif %}
+          </td>
+          {% endif %}
+          <td>
+            {% if reg.status == 'en_attente' %}
+              <span class="badge-pending">En attente</span>
+            {% elif reg.status == 'accepte' %}
+              <span class="badge-accepted">Accepté</span>
+              {% if reg.ticket_sent %}<span class="ml-1 text-xs text-green-600" title="Ticket envoyé">🎫</span>{% endif %}
+              {% if reg.attended_onsite or reg.attended_online %}
+                <span class="ml-1 text-xs text-blue-600" title="Présence confirmée">✓</span>
+              {% endif %}
+            {% else %}
+              <span class="badge-refused">Refusé</span>
+            {% endif %}
+          </td>
+          <td class="text-xs text-gray-500 whitespace-nowrap">{{ reg.registered_at|date:"d/m/Y H:i" }}</td>
+          <td>
+            {% if reg.status == 'en_attente' %}
+              <div class="flex gap-2">
+                <form method="post" action="{% url 'dashboard:registration_accept' pk=reg.pk %}" class="inline">
+                  {% csrf_token %}
+                  <button type="submit" class="btn-sm btn-accept">✓</button>
+                </form>
+                <form method="post" action="{% url 'dashboard:registration_refuse' pk=reg.pk %}" class="inline">
+                  {% csrf_token %}
+                  <button type="submit" class="btn-sm btn-refuse">✗</button>
+                </form>
+              </div>
+            {% elif reg.status == 'accepte' %}
+              <div class="flex flex-col gap-1">
+                <span class="text-xs text-gray-400">{{ reg.validated_at|date:"d/m/Y" }}</span>
+                {% if reg.needs_ticket %}
+                  <form method="post" action="{% url 'dashboard:resend_ticket' pk=reg.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-sm text-xs bg-amber-50 text-amber-700 hover:bg-amber-100">
+                      🎫 {% if reg.ticket_sent %}Renvoyer{% else %}Envoyer ticket{% endif %}
+                    </button>
+                  </form>
+                {% endif %}
+              </div>
+            {% else %}
+              <span class="text-xs text-gray-400">{{ reg.validated_at|date:"d/m/Y" }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="{% if participation_mode == 'hybrid' %}7{% else %}6{% endif %}" class="text-center py-12 text-gray-400">
+            Aucune inscription pour le moment.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function filterTable(status) {
+  const rows = document.querySelectorAll('#registrations-table tbody tr[data-status]');
+  rows.forEach(row => {
+    row.style.display = (status === 'all' || row.dataset.status === status) ? '' : 'none';
+  });
+  const map = { all:'all', en_attente:'pending', accepte:'accepted', refuse:'refused' };
+  ['all','pending','accepted','refused','onsite','online'].forEach(k => {
+    const btn = document.getElementById(`filter-${k}`);
+    if (!btn) return;
+    btn.classList.remove('bg-gray-900','text-white');
+    btn.classList.add('bg-gray-100','text-gray-600');
+  });
+  const btn = document.getElementById(`filter-${map[status] || status}`);
+  if (btn) { btn.classList.replace('bg-gray-100','bg-gray-900'); btn.classList.replace('text-gray-600','text-white'); }
+}
+
+function filterMode(mode) {
+  const rows = document.querySelectorAll('#registrations-table tbody tr[data-mode]');
+  rows.forEach(row => {
+    const m = row.dataset.mode;
+    row.style.display = (m === mode || m === 'both') ? '' : 'none';
+  });
+}
+
+function toggleAll(cb) {
+  document.querySelectorAll('.reg-checkbox').forEach(c => c.checked = cb.checked);
+  updateSelection();
+}
+
+function updateSelection() {
+  const checked = [...document.querySelectorAll('.reg-checkbox:checked')];
+  const panel   = document.getElementById('bulk-actions');
+  document.getElementById('selected-count').textContent = checked.length;
+  panel.classList.toggle('hidden', checked.length === 0);
+  ['bulk-ids-accept','bulk-ids-refuse'].forEach(containerId => {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    checked.forEach(cb => {
+      const input = document.createElement('input');
+      input.type  = 'hidden';
+      input.name  = 'reg_ids';
+      input.value = cb.value;
+      container.appendChild(input);
+    });
+  });
+}
+
+function clearSelection() {
+  document.querySelectorAll('.reg-checkbox').forEach(c => c.checked = false);
+  document.getElementById('select-all').checked = false;
+  updateSelection();
+}
+</script>
+{% endblock %}

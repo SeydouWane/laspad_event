@@ -1,0 +1,201 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block title %}Utilisateurs{% endblock %}
+{% block page_title %}Gestion des utilisateurs{% endblock %}
+{% block page_subtitle %}{{ total }} compte{{ total|pluralize }} enregistré{{ total|pluralize }}{% endblock %}
+
+{% block header_actions %}
+  {% if request.user.is_superuser %}
+  <a href="{% url 'dashboard:user_invite' %}" class="btn-sm btn-primary-sm">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+    </svg>
+    Inviter un utilisateur
+  </a>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+
+<!-- Stats -->
+<div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+  <div class="stat-card text-center">
+    <p class="text-2xl font-bold text-gray-900" style="font-family:'Sora',sans-serif;">{{ total }}</p>
+    <p class="text-xs text-gray-500 mt-1">Total</p>
+  </div>
+  <div class="stat-card text-center">
+    <p class="text-2xl font-bold text-green-700" style="font-family:'Sora',sans-serif;">{{ active }}</p>
+    <p class="text-xs text-gray-500 mt-1">Actifs</p>
+  </div>
+  <div class="stat-card text-center">
+    <p class="text-2xl font-bold text-red-500" style="font-family:'Sora',sans-serif;">{{ suspended }}</p>
+    <p class="text-xs text-gray-500 mt-1">Suspendus</p>
+  </div>
+  <div class="stat-card text-center">
+    <p class="text-2xl font-bold" style="font-family:'Sora',sans-serif;color:#c9a227;">{{ admins }}</p>
+    <p class="text-xs text-gray-500 mt-1">Administrateurs</p>
+  </div>
+  <div class="stat-card text-center">
+    <p class="text-2xl font-bold text-blue-600" style="font-family:'Sora',sans-serif;">{{ managers }}</p>
+    <p class="text-xs text-gray-500 mt-1">Gestionnaires</p>
+  </div>
+</div>
+
+<!-- Tableau -->
+<div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="table w-full">
+      <thead>
+        <tr>
+          <th class="text-left">Utilisateur</th>
+          <th class="text-left">Email</th>
+          <th class="text-left">Rôle</th>
+          <th class="text-left">Statut</th>
+          <th class="text-left">Inscrit le</th>
+          <th class="text-left">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr class="{% if not u.is_active %}opacity-50{% endif %}">
+
+          <!-- Avatar + nom -->
+          <td>
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0
+                {% if u.is_superuser %}bg-yellow-500
+                {% elif u.is_staff %}bg-blue-500
+                {% else %}bg-gray-400{% endif %}"
+                style="{% if u.is_superuser %}background:#c9a227{% elif u.is_staff %}background:#3b82f6{% endif %}">
+                {{ u.first_name|first|upper }}{{ u.last_name|first|upper }}
+              </div>
+              <div>
+                <p class="font-semibold text-gray-900 text-sm flex items-center gap-1.5">
+                  {{ u.get_full_name|default:u.username }}
+                  {% if u == request.user %}
+                    <span class="text-xs px-1.5 py-0.5 rounded" style="background:#f0fdf4;color:#1a6b3a;border:1px solid #bbf7d0;">Vous</span>
+                  {% endif %}
+                </p>
+                <p class="text-xs text-gray-400">@{{ u.username }}</p>
+              </div>
+            </div>
+          </td>
+
+          <!-- Email -->
+          <td class="text-sm text-gray-600">{{ u.email|default:"—" }}</td>
+
+          <!-- Rôle -->
+          <td>
+            {% if u.is_superuser %}
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold" style="background:#fef9e7;color:#b7791f;border:1px solid #f6e05e;">
+                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                </svg>
+                Administrateur
+              </span>
+            {% elif u.is_staff %}
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                </svg>
+                Gestionnaire
+              </span>
+            {% else %}
+              <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Lecture seule</span>
+            {% endif %}
+          </td>
+
+          <!-- Statut actif/suspendu -->
+          <td>
+            {% if u.is_active %}
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold" style="background:#d1fae5;color:#065f46;">
+                <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                Actif
+              </span>
+            {% else %}
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold" style="background:#fee2e2;color:#991b1b;">
+                <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                Suspendu
+              </span>
+            {% endif %}
+          </td>
+
+          <!-- Date -->
+          <td class="text-xs text-gray-500 whitespace-nowrap">{{ u.date_joined|date:"d/m/Y" }}</td>
+
+          <!-- Actions -->
+          <td>
+            {% if u != request.user and request.user.is_superuser %}
+            <div class="flex items-center gap-1.5">
+              <a href="{% url 'dashboard:user_edit' pk=u.pk %}"
+                 class="btn-sm bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs">
+                Modifier
+              </a>
+              {% if u.is_active %}
+                <form method="post" action="{% url 'dashboard:user_suspend' pk=u.pk %}" class="inline"
+                      onsubmit="return confirm('Suspendre le compte de {{ u.get_full_name|default:u.username }} ?')">
+                  {% csrf_token %}
+                  <button type="submit" class="btn-sm bg-yellow-50 text-yellow-700 hover:bg-yellow-100 text-xs">
+                    Suspendre
+                  </button>
+                </form>
+              {% else %}
+                <form method="post" action="{% url 'dashboard:user_activate' pk=u.pk %}" class="inline">
+                  {% csrf_token %}
+                  <button type="submit" class="btn-sm bg-green-50 text-green-700 hover:bg-green-100 text-xs">
+                    Réactiver
+                  </button>
+                </form>
+              {% endif %}
+              <a href="{% url 'dashboard:user_delete' pk=u.pk %}"
+                 class="btn-sm bg-red-50 text-red-700 hover:bg-red-100 text-xs">
+                Supprimer
+              </a>
+            </div>
+            {% elif u == request.user %}
+              <span class="text-xs text-gray-400 italic">Votre compte</span>
+            {% else %}
+              <span class="text-xs text-gray-300">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center py-12 text-gray-400">Aucun utilisateur.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Légende des rôles -->
+<div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+  <div class="bg-white rounded-xl border border-gray-200 p-4">
+    <div class="flex items-start gap-3">
+      <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:#fef9e7;">
+        <svg class="w-4 h-4" style="color:#c9a227;" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+        </svg>
+      </div>
+      <div>
+        <p class="font-semibold text-sm text-gray-800">Administrateur</p>
+        <p class="text-xs text-gray-500 mt-0.5 leading-relaxed">Accès complet — peut créer des événements, gérer les inscriptions, inviter/suspendre des utilisateurs et voir toutes les statistiques.</p>
+      </div>
+    </div>
+  </div>
+  <div class="bg-white rounded-xl border border-gray-200 p-4">
+    <div class="flex items-start gap-3">
+      <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-blue-50">
+        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+        </svg>
+      </div>
+      <div>
+        <p class="font-semibold text-sm text-gray-800">Gestionnaire</p>
+        <p class="text-xs text-gray-500 mt-0.5 leading-relaxed">Peut créer et gérer des événements, valider les inscriptions et exporter les données. Ne peut pas gérer les utilisateurs.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

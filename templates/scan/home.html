@@ -1,0 +1,409 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Scanner un ticket{% endblock %}
+{% block page_title %}Scanner un ticket{% endblock %}
+{% block page_subtitle %}Interface de pointage — présentiel{% endblock %}
+
+{% block content %}
+
+<!-- ── Tabs ── -->
+<div class="flex gap-2 mb-6">
+  <button onclick="showTab('camera')" id="tab-camera"
+          class="flex-1 py-3 rounded-xl text-sm font-bold transition-all"
+          style="background:#1a6b3a;color:#fff;">
+    📷 Scanner (caméra)
+  </button>
+  <button onclick="showTab('manual')" id="tab-manual"
+          class="flex-1 py-3 rounded-xl text-sm font-bold transition-all bg-gray-100 text-gray-600 hover:bg-gray-200">
+    ⌨️ Saisie manuelle
+  </button>
+</div>
+
+<!-- ── Tab Caméra ── -->
+<div id="panel-camera">
+  <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm mb-6">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center gap-3" style="background:#f8faf9;">
+      <div class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold" style="background:#1a6b3a;">📷</div>
+      <h2 class="font-semibold text-gray-900">Scanner le QR code</h2>
+    </div>
+    <div class="p-6">
+
+      <!-- Debug info -->
+      <div id="debug-info" class="mb-3 p-3 rounded-lg text-xs font-mono bg-gray-50 border border-gray-200 hidden">
+        <p class="text-gray-500">Dernière donnée QR :</p>
+        <p id="debug-qr-data" class="text-gray-900 break-all mt-1"></p>
+      </div>
+
+      <!-- Zone vidéo -->
+      <div class="relative rounded-xl overflow-hidden bg-gray-900 mb-4"
+           style="aspect-ratio:1/1;max-width:400px;margin:0 auto;">
+        <video id="qr-video" class="w-full h-full object-cover" playsinline autoplay muted></video>
+
+        <!-- Viseur -->
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div class="relative" style="width:65%;height:65%;">
+            <div class="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 rounded-tl-lg" style="border-color:#1a6b3a;"></div>
+            <div class="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 rounded-tr-lg" style="border-color:#1a6b3a;"></div>
+            <div class="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 rounded-bl-lg" style="border-color:#1a6b3a;"></div>
+            <div class="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 rounded-br-lg" style="border-color:#1a6b3a;"></div>
+            <div id="scan-line" class="absolute left-0 right-0 h-0.5 opacity-80"
+                 style="background:#1a6b3a;top:0;animation:scanLine 2s linear infinite;"></div>
+          </div>
+        </div>
+
+        <!-- Overlay résultat -->
+        <div id="scan-result-overlay" class="absolute inset-0 hidden items-center justify-center"
+             style="background:rgba(0,0,0,.8);">
+          <div class="text-center px-6">
+            <div id="scan-icon" class="text-6xl mb-3">✅</div>
+            <p id="scan-message" class="text-white font-bold text-lg"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Statut caméra -->
+      <div id="camera-status" class="text-center text-xs text-gray-400 mb-3">Caméra inactive</div>
+
+      <!-- Contrôles caméra -->
+      <div class="flex gap-3 justify-center mb-4">
+        <button id="btn-start-camera" onclick="startCamera()"
+                class="btn-sm px-5 py-2.5 font-semibold text-sm"
+                style="background:#1a6b3a;color:#fff;">
+          📷 Activer la caméra
+        </button>
+        <button id="btn-stop-camera" onclick="stopCamera()"
+                class="hidden btn-sm px-5 py-2.5 font-semibold text-sm bg-gray-100 text-gray-600">
+          ⏹ Arrêter
+        </button>
+        <button id="btn-flip-camera" onclick="flipCamera()"
+                class="hidden btn-sm px-5 py-2.5 font-semibold text-sm bg-blue-50 text-blue-600">
+          🔄 Retourner
+        </button>
+      </div>
+
+      <p class="text-xs text-gray-400 text-center">
+        Pointez la caméra vers le QR code du ticket. La détection est automatique.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ── Tab Saisie manuelle ── -->
+<div id="panel-manual" class="hidden">
+  <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm mb-6">
+    <div class="px-6 py-4 border-b border-gray-100 flex items-center gap-3" style="background:#f8faf9;">
+      <div class="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold" style="background:#1a6b3a;">⌨️</div>
+      <h2 class="font-semibold text-gray-900">Saisie manuelle</h2>
+    </div>
+    <div class="p-6">
+      <label class="block text-sm font-semibold text-gray-700 mb-2">
+        Token ou numéro de ticket
+      </label>
+      <div class="flex gap-3">
+        <input type="text" id="manual-token"
+               class="form-input flex-1 font-mono text-sm"
+               placeholder="LASPAD-2026-0001 ou UUID..."
+               autocomplete="off">
+        <button onclick="handleManualSubmit()"
+                class="btn-sm px-5 py-2.5 font-semibold text-sm flex-shrink-0"
+                style="background:#1a6b3a;color:#fff;">
+          Valider →
+        </button>
+      </div>
+      <p class="text-xs text-gray-400 mt-2">
+        Saisissez le numéro du ticket (ex: LASPAD-2026-0001) ou le token UUID.
+      </p>
+      <div id="manual-error" class="hidden mt-2 p-2 rounded-lg bg-red-50 text-red-600 text-xs"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Derniers scans ── -->
+<div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+  <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between" style="background:#f8faf9;">
+    <h2 class="font-semibold text-gray-900">Derniers scans</h2>
+    <button onclick="clearScans()" class="text-xs text-gray-400 hover:text-red-500 transition-colors">
+      Effacer
+    </button>
+  </div>
+  <div id="scan-history" class="divide-y divide-gray-50">
+    <p class="text-sm text-gray-400 text-center py-8" id="no-scans-msg">
+      Aucun scan pour le moment.
+    </p>
+  </div>
+</div>
+
+<style>
+@keyframes scanLine {
+  0%   { top: 0%; }
+  50%  { top: 95%; }
+  100% { top: 0%; }
+}
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════
+function showTab(tab) {
+  document.getElementById('panel-camera').classList.toggle('hidden', tab !== 'camera');
+  document.getElementById('panel-manual').classList.toggle('hidden', tab !== 'manual');
+  document.getElementById('tab-camera').style.cssText = tab === 'camera'
+    ? 'background:#1a6b3a;color:#fff;flex:1;padding:12px;border-radius:12px;font-size:14px;font-weight:700;'
+    : 'background:#f3f4f6;color:#6b7280;flex:1;padding:12px;border-radius:12px;font-size:14px;font-weight:700;';
+  document.getElementById('tab-manual').style.cssText = tab === 'manual'
+    ? 'background:#1a6b3a;color:#fff;flex:1;padding:12px;border-radius:12px;font-size:14px;font-weight:700;'
+    : 'background:#f3f4f6;color:#6b7280;flex:1;padding:12px;border-radius:12px;font-size:14px;font-weight:700;';
+  if (tab !== 'camera') stopCamera();
+}
+
+// ═══════════════════════════════════════════════════
+// EXTRACTION TOKEN — robuste
+// ═══════════════════════════════════════════════════
+const UUID_REGEX = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+function extractToken(data) {
+  if (!data) return null;
+  data = data.trim();
+
+  // 1. UUID seul
+  if (UUID_REGEX.test(data) && data.length === 36) return data;
+
+  // 2. URL contenant /scan/UUID/
+  const matchScan = data.match(/\/scan\/([0-9a-f-]{36})\/?/i);
+  if (matchScan) return matchScan[1];
+
+  // 3. URL contenant un UUID n'importe où
+  const matchUUID = data.match(UUID_REGEX);
+  if (matchUUID) return matchUUID[0];
+
+  return null;
+}
+
+// ═══════════════════════════════════════════════════
+// CAMÉRA
+// ═══════════════════════════════════════════════════
+let videoStream      = null;
+let scanInterval     = null;
+let useFrontCamera   = false;
+let lastScannedToken = null;
+let scanCooldown     = false;
+
+function setStatus(msg, color='#6b7280') {
+  const el = document.getElementById('camera-status');
+  if (el) { el.textContent = msg; el.style.color = color; }
+}
+
+async function startCamera() {
+  try {
+    setStatus('Démarrage de la caméra...', '#c9a227');
+    const constraints = {
+      video: {
+        facingMode: useFrontCamera ? 'user' : 'environment',
+        width:  { ideal: 1280 },
+        height: { ideal: 1280 },
+      }
+    };
+    videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+    const video = document.getElementById('qr-video');
+    video.srcObject = videoStream;
+    video.onloadedmetadata = () => { video.play(); };
+    await new Promise(resolve => { video.onplay = resolve; setTimeout(resolve, 2000); });
+
+    document.getElementById('btn-start-camera').classList.add('hidden');
+    document.getElementById('btn-stop-camera').classList.remove('hidden');
+    document.getElementById('btn-flip-camera').classList.remove('hidden');
+
+    setStatus('✅ Caméra active — pointez vers le QR code', '#1a6b3a');
+
+    // Lancer la détection toutes les 150ms
+    scanInterval = setInterval(detectQR, 150);
+
+  } catch (err) {
+    setStatus('❌ Erreur caméra : ' + err.message, '#ef4444');
+    console.error('Camera error:', err);
+
+    // Proposer la saisie manuelle
+    showTab('manual');
+    alert('Impossible d\'accéder à la caméra. Utilisez la saisie manuelle.');
+  }
+}
+
+function stopCamera() {
+  clearInterval(scanInterval);
+  scanInterval = null;
+  if (videoStream) {
+    videoStream.getTracks().forEach(t => t.stop());
+    videoStream = null;
+  }
+  const video = document.getElementById('qr-video');
+  if (video) video.srcObject = null;
+  document.getElementById('btn-start-camera').classList.remove('hidden');
+  document.getElementById('btn-stop-camera').classList.add('hidden');
+  document.getElementById('btn-flip-camera').classList.add('hidden');
+  setStatus('Caméra inactive');
+}
+
+async function flipCamera() {
+  useFrontCamera = !useFrontCamera;
+  stopCamera();
+  await new Promise(r => setTimeout(r, 300));
+  startCamera();
+}
+
+function detectQR() {
+  if (scanCooldown) return;
+  const video = document.getElementById('qr-video');
+  if (!video || !video.videoWidth || video.readyState < 2) return;
+
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+      inversionAttempts: 'dontInvert',
+    });
+
+    if (code && code.data) {
+      // Afficher la donnée brute pour debug
+      const debugEl = document.getElementById('debug-qr-data');
+      if (debugEl) debugEl.textContent = code.data;
+
+      const token = extractToken(code.data);
+
+      if (token && token !== lastScannedToken) {
+        lastScannedToken = token;
+        onTokenFound(token);
+      } else if (!token) {
+        // QR code détecté mais pas un token LASPAD
+        setStatus('⚠️ QR code non reconnu : ' + code.data.substring(0, 30), '#c9a227');
+      }
+    }
+  } catch (err) {
+    console.error('QR detection error:', err);
+  }
+}
+
+function onTokenFound(token) {
+  scanCooldown = true;
+  clearInterval(scanInterval);
+
+  setStatus('🔄 Token trouvé ! Redirection...', '#1a6b3a');
+  showScanOverlay('🔄', 'Chargement du ticket...');
+
+  addToHistory('...', token.substring(0, 8) + '...', 'ok');
+
+  // Redirection vers la page du ticket
+  setTimeout(() => {
+    window.location.href = '/dashboard/scan/' + token + '/';
+  }, 800);
+}
+
+function showScanOverlay(icon, message) {
+  const overlay = document.getElementById('scan-result-overlay');
+  document.getElementById('scan-icon').textContent    = icon;
+  document.getElementById('scan-message').textContent = message;
+  overlay.classList.remove('hidden');
+  overlay.classList.add('flex');
+}
+
+// ═══════════════════════════════════════════════════
+// SAISIE MANUELLE
+// ═══════════════════════════════════════════════════
+function handleManualSubmit() {
+  const val    = document.getElementById('manual-token').value.trim();
+  const errDiv = document.getElementById('manual-error');
+  if (!val) return;
+
+  errDiv.classList.add('hidden');
+
+  // Essayer d'extraire un token UUID directement
+  const token = extractToken(val);
+  if (token) {
+    window.location.href = '/dashboard/scan/' + token + '/';
+    return;
+  }
+
+  // Sinon chercher par numéro de ticket via API
+  setStatus('Recherche en cours...', '#c9a227');
+  fetch('/dashboard/scan/lookup/?q=' + encodeURIComponent(val))
+    .then(r => r.json())
+    .then(data => {
+      if (data.token) {
+        window.location.href = '/dashboard/scan/' + data.token + '/';
+      } else {
+        errDiv.textContent = 'Ticket introuvable pour : ' + val;
+        errDiv.classList.remove('hidden');
+      }
+    })
+    .catch(err => {
+      errDiv.textContent = 'Erreur de connexion. Vérifiez votre connexion internet.';
+      errDiv.classList.remove('hidden');
+    });
+}
+
+// Entrée clavier pour saisie manuelle
+document.getElementById('manual-token')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleManualSubmit();
+});
+
+// ═══════════════════════════════════════════════════
+// HISTORIQUE SCANS
+// ═══════════════════════════════════════════════════
+let scanHistory = [];
+try {
+  scanHistory = JSON.parse(sessionStorage.getItem('scan_history') || '[]');
+} catch(e) { scanHistory = []; }
+
+function addToHistory(name, ticket, status) {
+  scanHistory.unshift({
+    name:   name,
+    ticket: ticket,
+    status: status,
+    time:   new Date().toLocaleTimeString('fr-FR'),
+  });
+  if (scanHistory.length > 20) scanHistory.pop();
+  try { sessionStorage.setItem('scan_history', JSON.stringify(scanHistory)); } catch(e){}
+  renderHistory();
+}
+
+function renderHistory() {
+  const container = document.getElementById('scan-history');
+  const noMsg     = document.getElementById('no-scans-msg');
+  if (!container) return;
+
+  if (scanHistory.length === 0) {
+    container.innerHTML = '';
+    if (noMsg) { noMsg.classList.remove('hidden'); container.appendChild(noMsg); }
+    return;
+  }
+  if (noMsg) noMsg.classList.add('hidden');
+
+  const icons = { ok:'✅', duplicate:'⚠️', refused:'❌', unknown:'❓' };
+  container.innerHTML = scanHistory.map(s => `
+    <div class="flex items-center gap-3 px-6 py-3">
+      <span class="text-xl flex-shrink-0">${icons[s.status] || '❓'}</span>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold text-gray-900 truncate">${s.name}</p>
+        <p class="text-xs text-gray-400 font-mono">${s.ticket}</p>
+      </div>
+      <span class="text-xs text-gray-400 flex-shrink-0">${s.time}</span>
+    </div>
+  `).join('');
+}
+
+function clearScans() {
+  scanHistory = [];
+  try { sessionStorage.removeItem('scan_history'); } catch(e){}
+  renderHistory();
+}
+
+// Init
+renderHistory();
+</script>
+{% endblock %}

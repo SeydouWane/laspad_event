@@ -1,0 +1,23 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Confirmation — LASPAD Event{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto px-4 py-20 text-center">
+  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-10">
+    <div class="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center bg-green-100">
+      <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+      </svg>
+    </div>
+    <h1 class="text-2xl font-bold text-gray-900 mb-3">Inscription vérifiée</h1>
+    <p class="text-gray-600 mb-6">
+      Votre inscription à <strong>{{ registration.event.title }}</strong> est bien enregistrée.<br>
+      Statut actuel : <strong>{{ registration.get_status_display }}</strong>
+    </p>
+    <a href="{% url 'events:list' %}" class="btn-primary inline-flex">
+      Retour aux événements
+    </a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends 'base/base.html' %}
+{% load notifications_tags %}
+
+{% block title %}Inscription confirmée — LASPAD Event{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto px-4 py-20 text-center">
+  <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-10">
+
+    <!-- Icône animée -->
+    <div class="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center
+      {% if registration.status == 'accepte' %}bg-green-100{% else %}bg-yellow-100{% endif %}">
+      {% if registration.status == 'accepte' %}
+        <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+      {% else %}
+        <svg class="w-10 h-10 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      {% endif %}
+    </div>
+
+    {% if registration.status == 'accepte' %}
+      <h1 class="text-2xl font-bold text-gray-900 mb-3">Inscription confirmée ! 🎉</h1>
+      <p class="text-gray-600 leading-relaxed mb-6">
+        Bienvenue, <strong>{{ registration.participant.full_name }}</strong> !<br>
+        Votre inscription à <strong>{{ registration.event.title }}</strong> est confirmée.<br>
+        Un email de confirmation vous a été envoyé à <strong>{{ registration.participant.email }}</strong>.
+      </p>
+      {% load notifications_tags %}
+      <a href="{% google_calendar_link registration.event %}"
+         target="_blank"
+         class="inline-flex items-center gap-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl px-5 py-3 text-sm font-medium hover:bg-blue-100 transition-colors mb-6">
+        📅 Ajouter à Google Calendar
+      </a>
+    {% else %}
+      <h1 class="text-2xl font-bold text-gray-900 mb-3">Candidature envoyée !</h1>
+      <p class="text-gray-600 leading-relaxed mb-6">
+        Merci, <strong>{{ registration.participant.full_name }}</strong> !<br>
+        Votre demande d'inscription à <strong>{{ registration.event.title }}</strong> a bien été reçue.<br>
+        L'équipe LASPAD va l'examiner et vous répondra par email à <strong>{{ registration.participant.email }}</strong>.
+      </p>
+    {% endif %}
+
+    <!-- Récap événement -->
+    <div class="bg-gray-50 rounded-xl p-4 text-left text-sm mb-8 space-y-2 border border-gray-200">
+      <div class="flex gap-2 text-gray-600">
+        <span class="font-medium w-20">Événement</span>
+        <span>{{ registration.event.title }}</span>
+      </div>
+      <div class="flex gap-2 text-gray-600">
+        <span class="font-medium w-20">Date</span>
+        <span>{{ registration.event.start_datetime|date:"d F Y à H\hi" }}</span>
+      </div>
+      {% if registration.event.location and registration.event.location.mode == 'online' %}
+      <div class="flex gap-2 text-gray-600">
+        <span class="font-medium w-20">Format</span>
+        <span>🌐 En ligne — {{ registration.event.location.get_platform_display }}</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <a href="{% url 'events:list' %}" class="btn-primary inline-flex">
+      ← Voir tous les événements
+    </a>
+  </div>
+</div>
+{% endblock %}
