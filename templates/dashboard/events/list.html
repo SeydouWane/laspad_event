@@ -151,35 +151,29 @@
           <td>
             <div class="flex flex-wrap items-center gap-1.5">
               <a href="{% url 'dashboard:event_detail' pk=event.pk %}"
-                 class="btn-sm bg-gray-100 text-gray-700 hover:bg-gray-200 text-xs">
+                class="btn-sm bg-gray-100 text-gray-700 hover:bg-gray-200 text-xs">
                 Gérer
               </a>
               <a href="{% url 'dashboard:event_edit' pk=event.pk %}"
-                 class="btn-sm bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs">
+                class="btn-sm bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs">
                 Modifier
               </a>
               <a href="{% url 'dashboard:schedule_manage' pk=event.pk %}"
-                 class="btn-sm bg-green-50 text-green-700 hover:bg-green-100 text-xs">
+                class="btn-sm bg-green-50 text-green-700 hover:bg-green-100 text-xs">
                 📅
               </a>
               <a href="{% url 'dashboard:contact_participants' pk=event.pk %}"
-                 class="btn-sm bg-purple-50 text-purple-700 hover:bg-purple-100 text-xs">
+                class="btn-sm bg-purple-50 text-purple-700 hover:bg-purple-100 text-xs">
                 ✉
               </a>
               <a href="{% url 'dashboard:export_csv' pk=event.pk %}"
-                 class="btn-sm bg-gray-50 text-gray-600 hover:bg-gray-100 text-xs">
+                class="btn-sm bg-gray-50 text-gray-600 hover:bg-gray-100 text-xs">
                 CSV
               </a>
-              {% if event.participation_mode == 'onsite_only' or event.participation_mode == 'hybrid' %}
-              <a href="{% url 'dashboard:scan_home' %}"
-                 class="btn-sm text-xs font-semibold"
-                 style="background:#0f1f15;color:#fff;"
-                 title="Scanner les tickets de cet événement">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8H3m2 0h-.01M9 4H7"/>
-                </svg>
-                Scanner
+              {% if request.user.is_superuser %}
+              <a href="{% url 'dashboard:event_delete' pk=event.pk %}"
+                class="btn-sm bg-red-50 text-red-600 hover:bg-red-100 text-xs">
+                🗑️
               </a>
               {% endif %}
             </div>

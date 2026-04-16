@@ -4,11 +4,7 @@
 {% block page_title %}Validation ticket{% endblock %}
 {% block page_subtitle %}{{ event.title|truncatechars:50 }}{% endblock %}
 
-{% block header_actions %}
-  <a href="{% url 'dashboard:scan_home' %}"
-     class="btn-sm bg-gray-100 text-gray-700 hover:bg-gray-200">
-    ← Retour scan
-  </a>
+
 {% endblock %}
 
 {% block content %}
@@ -57,13 +53,7 @@
         {% endif %}
       </p>
     </div>
-    <div class="p-6 space-y-4">
-      {% include 'dashboard/scan/_participant_card.html' %}
-      <a href="{% url 'dashboard:scan_home' %}"
-         class="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">
-        Scanner un autre ticket
-      </a>
-    </div>
+
   </div>
 
   {% else %}
@@ -170,15 +160,6 @@
       </form>
       {% endif %}
 
-      <!-- Scanner un autre -->
-      <a href="{% url 'dashboard:scan_home' %}"
-         class="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8H3m2 0h-.01M9 4H7"/>
-        </svg>
-        Scanner un autre ticket
-      </a>
 
     </div>
   </div>
@@ -211,3 +192,6 @@
 </script>
 
 {% endblock %}
+
+
+

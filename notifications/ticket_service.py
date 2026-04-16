@@ -229,7 +229,7 @@ def generate_ticket_pdf(registration) -> bytes:
     )
     c.drawCentredString(
         w/2, footer_y - 4*mm,
-        f'En cas de problème : contact@laspad.org'
+        f'En cas de problème : communication@laspad.org'
     )
 
     c.save()
@@ -265,3 +265,74 @@ def save_ticket_pdf(registration) -> str:
     registration.save(update_fields=['ticket_pdf', 'ticket_number', 'ticket_sent'])
 
     return registration.ticket_pdf.name
+
+def generate_event_qr(event) -> str:
+    """
+    Génère un QR code du lien d'inscription avec le logo LASPAD au centre.
+    Sauvegarde dans media/events/qrcodes/event_<pk>.png
+    Retourne le chemin relatif au MEDIA_ROOT.
+    """
+    import os
+    from django.conf import settings
+    from django.core.files.base import ContentFile
+
+    site_url = getattr(settings, 'SITE_URL', 'https://events.laspad.org')
+
+    # URL du formulaire d'inscription
+    registration_url = f"{site_url}{event.get_registration_url()}"
+
+    # ── Générer le QR code ──
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_H,  # H = 30% correction (nécessaire pour logo)
+        box_size=12,
+        border=2,
+    )
+    qr.add_data(registration_url)
+    qr.make(fit=True)
+    qr_img = qr.make_image(fill_color='black', back_color='white').convert('RGBA')
+
+    # ── Incruster le logo LASPAD au centre ──
+    logo_path = os.path.join(settings.BASE_DIR, 'static', 'img', 'logo.png')
+    if os.path.exists(logo_path):
+        logo = Image.open(logo_path).convert('RGBA')
+
+        # Taille du logo = 25% du QR
+        qr_w, qr_h = qr_img.size
+        logo_size   = int(qr_w * 0.25)
+        logo        = logo.resize((logo_size, logo_size), Image.LANCZOS)
+
+        # Fond blanc arrondi derrière le logo
+        padding   = 10
+        bg_size   = logo_size + padding * 2
+        bg        = Image.new('RGBA', (bg_size, bg_size), (255, 255, 255, 255))
+
+        # Coller le fond blanc puis le logo au centre du QR
+        bg_pos    = ((qr_w - bg_size) // 2, (qr_h - bg_size) // 2)
+        logo_pos  = ((qr_w - logo_size) // 2, (qr_h - logo_size) // 2)
+
+        qr_img.paste(bg,   bg_pos)
+        qr_img.paste(logo, logo_pos, mask=logo)
+
+    # ── Convertir en RGB et sauvegarder ──
+    final = qr_img.convert('RGB')
+    buf   = io.BytesIO()
+    final.save(buf, format='PNG', dpi=(300, 300))
+    buf.seek(0)
+
+    # Sauvegarder dans media/events/qrcodes/
+    filename     = f"event_{event.pk}_qr.png"
+    save_dir     = os.path.join(settings.MEDIA_ROOT, 'events', 'qrcodes')
+    os.makedirs(save_dir, exist_ok=True)
+    full_path    = os.path.join(save_dir, filename)
+
+    with open(full_path, 'wb') as f:
+        f.write(buf.read())
+
+    # Stocker le chemin relatif dans le modèle si le champ existe
+    rel_path = f"events/qrcodes/{filename}"
+    if hasattr(event, 'registration_qr'):
+        event.registration_qr.name = rel_path
+        event.save(update_fields=['registration_qr'])
+
+    return rel_path

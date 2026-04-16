@@ -217,16 +217,6 @@
       Participants
     </a>
 
-    <a href="{% url 'dashboard:scan_home' %}"
-       class="nav-item {% if 'scan' in request.path %}active{% endif %}"
-       onclick="closeSidebarMobile()">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8H3m2 0h-.01M9 4H7"/>
-      </svg>
-      Scanner tickets
-    </a>
-
     <a href="{% url 'dashboard:stats' %}"
        class="nav-item {% if request.resolver_match.url_name == 'stats' %}active{% endif %}"
        onclick="closeSidebarMobile()">

@@ -1,0 +1,13 @@
+﻿__pycache__/
+*.pyc
+*.pyo
+.env
+db_local.sqlite3
+media/
+staticfiles/
+venv/
+.venv/
+.git/
+*.log
+config/settings.ini
+.DS_Store

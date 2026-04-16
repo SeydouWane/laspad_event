@@ -17,8 +17,8 @@ class Organizer(models.Model):
         return f"{self.user.get_full_name()} — {self.institution}"
 
     class Meta:
-        verbose_name          = 'Organisateur'
-        verbose_name_plural   = 'Organisateurs'
+        verbose_name        = 'Organisateur'
+        verbose_name_plural = 'Organisateurs'
 
 
 class Location(models.Model):
@@ -30,7 +30,6 @@ class Location(models.Model):
         (MODE_ONSITE, 'Présentiel'),
         (MODE_HYBRID, 'Hybride'),
     ]
-
     PLATFORM_MEET    = 'meet'
     PLATFORM_ZOOM    = 'zoom'
     PLATFORM_YOUTUBE = 'youtube'
@@ -41,13 +40,12 @@ class Location(models.Model):
         (PLATFORM_YOUTUBE, 'YouTube Live'),
         (PLATFORM_OTHER,   'Autre'),
     ]
-
-    mode           = models.CharField(max_length=10, choices=MODE_CHOICES, default=MODE_ONLINE)
-    platform       = models.CharField(max_length=10, choices=PLATFORM_CHOICES, blank=True, null=True)
-    online_link    = models.URLField(blank=True, null=True, verbose_name='Lien de diffusion')
-    address        = models.CharField(max_length=500, blank=True, verbose_name='Adresse')
-    city           = models.CharField(max_length=100, blank=True, verbose_name='Ville')
-    country        = models.CharField(max_length=100, default='Sénégal', verbose_name='Pays')
+    mode            = models.CharField(max_length=10, choices=MODE_CHOICES, default=MODE_ONLINE)
+    platform        = models.CharField(max_length=10, choices=PLATFORM_CHOICES, blank=True, null=True)
+    online_link     = models.URLField(blank=True, null=True, verbose_name='Lien de diffusion')
+    address         = models.CharField(max_length=500, blank=True, verbose_name='Adresse')
+    city            = models.CharField(max_length=100, blank=True, verbose_name='Ville')
+    country         = models.CharField(max_length=100, default='Sénégal', verbose_name='Pays')
     google_maps_url = models.URLField(blank=True, null=True, verbose_name='Lien Google Maps')
 
     def __str__(self):
@@ -61,7 +59,7 @@ class Location(models.Model):
 
 
 class Event(models.Model):
-    # ── Types ──────────────────────────────────────────────────────
+    # ── Types ──
     TYPE_WEBINAR    = 'webinaire'
     TYPE_CONFERENCE = 'conference'
     TYPE_WORKSHOP   = 'atelier'
@@ -75,7 +73,7 @@ class Event(models.Model):
         (TYPE_OTHER,      'Autre'),
     ]
 
-    # ── Accès ──────────────────────────────────────────────────────
+    # ── Accès ──
     ACCESS_DIRECT     = 'direct'
     ACCESS_VALIDATION = 'validation'
     ACCESS_CHOICES    = [
@@ -83,7 +81,7 @@ class Event(models.Model):
         (ACCESS_VALIDATION, 'Avec validation'),
     ]
 
-    # ── Statuts ────────────────────────────────────────────────────
+    # ── Statuts ──
     STATUS_DRAFT     = 'brouillon'
     STATUS_PUBLISHED = 'publie'
     STATUS_CANCELLED = 'annule'
@@ -95,7 +93,7 @@ class Event(models.Model):
         (STATUS_FINISHED,  'Terminé'),
     ]
 
-    # ── Mode de participation ───────────────────────────────────────
+    # ── Mode de participation ──
     PARTICIPATION_ONSITE_ONLY = 'onsite_only'
     PARTICIPATION_ONLINE_ONLY = 'online_only'
     PARTICIPATION_HYBRID      = 'hybrid'
@@ -105,21 +103,21 @@ class Event(models.Model):
         (PARTICIPATION_HYBRID,      'Hybride (présentiel + en ligne)'),
     ]
 
-    # ── Identification ─────────────────────────────────────────────
+    # ── Identification ──
     id   = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     slug = models.SlugField(max_length=255, unique=True, blank=True)
 
-    # ── Infos principales ──────────────────────────────────────────
+    # ── Infos principales ──
     title       = models.CharField(max_length=300, verbose_name='Titre')
     description = models.TextField(verbose_name='Description scientifique')
     event_type  = models.CharField(max_length=20, choices=TYPE_CHOICES, default=TYPE_WEBINAR, verbose_name='Type')
     status      = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PUBLISHED, verbose_name='Statut')
 
-    # ── Dates ──────────────────────────────────────────────────────
+    # ── Dates ──
     start_datetime = models.DateTimeField(verbose_name='Date et heure de début')
     end_datetime   = models.DateTimeField(verbose_name='Date et heure de fin')
 
-    # ── Mode de participation global ───────────────────────────────
+    # ── Mode de participation global ──
     participation_mode = models.CharField(
         max_length=20,
         choices=PARTICIPATION_CHOICES,
@@ -127,43 +125,39 @@ class Event(models.Model):
         verbose_name='Mode de participation',
     )
 
-    # ── Capacité & accès PRÉSENTIEL ────────────────────────────────
+    # ── Capacité & accès PRÉSENTIEL ──
     max_onsite = models.PositiveIntegerField(
         null=True, blank=True,
         verbose_name='Nombre max de places en présentiel',
         help_text='Laisser vide pour illimité',
     )
     access_onsite = models.CharField(
-        max_length=20,
-        choices=ACCESS_CHOICES,
+        max_length=20, choices=ACCESS_CHOICES,
         default=ACCESS_DIRECT,
         verbose_name="Mode d'accès présentiel",
     )
     auto_accept_onsite = models.PositiveIntegerField(
         null=True, blank=True,
         verbose_name='Accepter automatiquement les N premiers (présentiel)',
-        help_text='Ex: 50 → les 50 premiers inscrits en présentiel sont acceptés automatiquement',
     )
 
-    # ── Capacité & accès EN LIGNE ──────────────────────────────────
+    # ── Capacité & accès EN LIGNE ──
     max_online = models.PositiveIntegerField(
         null=True, blank=True,
         verbose_name='Nombre max de places en ligne',
         help_text='Laisser vide pour illimité',
     )
     access_online = models.CharField(
-        max_length=20,
-        choices=ACCESS_CHOICES,
+        max_length=20, choices=ACCESS_CHOICES,
         default=ACCESS_DIRECT,
         verbose_name="Mode d'accès en ligne",
     )
     auto_accept_online = models.PositiveIntegerField(
         null=True, blank=True,
         verbose_name='Accepter automatiquement les N premiers (en ligne)',
-        help_text='Ex: 200 → les 200 premiers inscrits en ligne sont acceptés automatiquement',
     )
 
-    # ── Champs legacy (conservés pour compatibilité) ───────────────
+    # ── Champs legacy ──
     is_capacity_limited = models.BooleanField(default=False, verbose_name='Places limitées (legacy)')
     max_participants    = models.PositiveIntegerField(null=True, blank=True, verbose_name='Nombre max (legacy)')
     access_mode         = models.CharField(
@@ -172,13 +166,13 @@ class Event(models.Model):
         verbose_name="Mode d'accès (legacy)",
     )
 
-    # ── Lieu ───────────────────────────────────────────────────────
+    # ── Lieu ──
     location = models.ForeignKey(
         Location, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='events',
     )
 
-    # ── Organisateurs & intervenants ───────────────────────────────
+    # ── Organisateurs & intervenants ──
     organizer = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True,
         related_name='organized_events',
@@ -190,20 +184,27 @@ class Event(models.Model):
         verbose_name='Intervenants',
     )
 
-    # ── Médias ─────────────────────────────────────────────────────
+    # ── Médias ──
     banner = models.ImageField(
         upload_to='events/banners/', blank=True, null=True,
         verbose_name='Affiche / Bannière',
     )
+    program_pdf = models.FileField(
+        upload_to='programs/', null=True, blank=True,
+        verbose_name='Programme PDF',
+    )
+    registration_qr = models.ImageField(
+        upload_to='events/qrcodes/', null=True, blank=True,
+        verbose_name='QR code inscription',
+    )
 
-    # ── Google Calendar ────────────────────────────────────────────
+    # ── Google Calendar ──
     google_calendar_event_id = models.CharField(max_length=500, blank=True, null=True)
 
-    # ── Timestamps ─────────────────────────────────────────────────
+    # ── Timestamps ──
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    # ──────────────────────────────────────────────────────────────
     def save(self, *args, **kwargs):
         if not self.slug:
             base_slug = slugify(self.title)
@@ -221,7 +222,7 @@ class Event(models.Model):
     def get_registration_url(self):
         return reverse('registrations:register', kwargs={'slug': self.slug})
 
-    # ── Properties générales ───────────────────────────────────────
+    # ── Properties générales ──
     @property
     def is_upcoming(self):
         return self.start_datetime > timezone.now()
@@ -238,7 +239,7 @@ class Event(models.Model):
     def is_multiday(self):
         return self.start_datetime.date() != self.end_datetime.date()
 
-    # ── Properties PRÉSENTIEL ──────────────────────────────────────
+    # ── Properties PRÉSENTIEL ──
     @property
     def accepted_onsite(self):
         return self.registrations.filter(
@@ -249,7 +250,7 @@ class Event(models.Model):
     @property
     def spots_remaining_onsite(self):
         if self.max_onsite is None:
-            return None  # illimité
+            return None
         return max(0, self.max_onsite - self.accepted_onsite)
 
     @property
@@ -258,7 +259,7 @@ class Event(models.Model):
             return False
         return self.spots_remaining_onsite == 0
 
-    # ── Properties EN LIGNE ────────────────────────────────────────
+    # ── Properties EN LIGNE ──
     @property
     def accepted_online(self):
         return self.registrations.filter(
@@ -269,7 +270,7 @@ class Event(models.Model):
     @property
     def spots_remaining_online(self):
         if self.max_online is None:
-            return None  # illimité
+            return None
         return max(0, self.max_online - self.accepted_online)
 
     @property
@@ -278,7 +279,7 @@ class Event(models.Model):
             return False
         return self.spots_remaining_online == 0
 
-    # ── Properties legacy (compatibilité ancien code) ──────────────
+    # ── Properties legacy ──
     @property
     def spots_remaining(self):
         if not self.is_capacity_limited:
@@ -309,16 +310,10 @@ class Event(models.Model):
         ordering            = ['-start_datetime']
 
 
-# ══════════════════════════════════════════════════════════════════
-# CHRONOGRAMME MULTI-JOURS
-# ══════════════════════════════════════════════════════════════════
-
 class EventDay(models.Model):
-    """Un jour d'un événement multi-jours."""
     event       = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='days')
     date        = models.DateField(verbose_name='Date')
-    title       = models.CharField(max_length=200, verbose_name='Titre du jour', blank=True,
-                                   help_text='Ex: Jour 1 — Ouverture')
+    title       = models.CharField(max_length=200, blank=True, verbose_name='Titre du jour')
     description = models.TextField(blank=True, verbose_name='Description du jour')
     order       = models.PositiveSmallIntegerField(default=1, verbose_name='Ordre')
 
@@ -326,17 +321,16 @@ class EventDay(models.Model):
         return f"{self.event.title} — {self.date.strftime('%d/%m/%Y')} ({self.title})"
 
     class Meta:
-        verbose_name        = 'Jour d\'événement'
-        verbose_name_plural = 'Jours d\'événement'
+        verbose_name        = "Jour d'événement"
+        verbose_name_plural = "Jours d'événement"
         ordering            = ['date', 'order']
         unique_together     = ['event', 'date']
 
 
 class Session(models.Model):
-    """Une session dans un jour d'événement."""
-    SESSION_MODE_ONSITE = 'onsite'
-    SESSION_MODE_ONLINE = 'online'
-    SESSION_MODE_BOTH   = 'both'
+    SESSION_MODE_ONSITE  = 'onsite'
+    SESSION_MODE_ONLINE  = 'online'
+    SESSION_MODE_BOTH    = 'both'
     SESSION_MODE_CHOICES = [
         (SESSION_MODE_ONSITE, 'Présentiel'),
         (SESSION_MODE_ONLINE, 'En ligne'),
@@ -354,14 +348,9 @@ class Session(models.Model):
         related_name='sessions',
         verbose_name='Intervenant',
     )
-    location_note = models.CharField(
-        max_length=200, blank=True,
-        verbose_name='Lieu / Salle',
-        help_text='Ex: Salle A, Amphithéâtre, Zoom Room 2',
-    )
+    location_note = models.CharField(max_length=200, blank=True, verbose_name='Lieu / Salle')
     mode          = models.CharField(
-        max_length=10,
-        choices=SESSION_MODE_CHOICES,
+        max_length=10, choices=SESSION_MODE_CHOICES,
         default=SESSION_MODE_BOTH,
         verbose_name='Mode de la session',
     )
